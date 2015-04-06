@@ -1,0 +1,79 @@
+Simplified BNF to CQL script. The focus here is split in SPACES, WHERE, ITEM-NAME and LITERAL tokens.
+
+<CQL>		::= [<SPACES>] <COMMAND> [ <SPACES> <CONDITION>  ] [ <SPACES>] [<COMA> [<SPACES>]]
+
+*<SPACES> 	::= <SPACE> [<SPACES>]
+
+*<SPACE>		::= " "
+
+<COMMAND>	::= <RESERVED WORDS> <SPACES> [<SELECTOR ITEM>] [<SPACES>] [<SYMBOL>] [<SPACES>]  [<LITERAL>] [<SPACES>] [<COMMAND>]
+
+*<RESERVED WORDS>::= <RESERVED WORD> [<SPACES> <RESERVED WORDS>]
+
+*<RESERVED WORD>	::= ADD	|	ALL	|	ALLOW	|	ALTER	|	AND	|	ANY	|	APPLY	|	ASC	|	ASCII	|	AUTHORIZE	|	BATCH	|	BEGIN	|	BIGINT	|	BLOB	|	BOOLEAN	|	BY	|	
+CLUSTERING	|	COLUMNFAMILY	|	COMPACT	|	COUNT	|	COUNTER	|	CONSISTENCY	|	CREATE	|	DECIMAL	|	DELETE	|	DESC	|	DOUBLE	|	DROP	|	EACH_QUORUM	|	FILTERING	|
+FLOAT	|	FROM	|	GRANT	|	IN	|	INDEX	|	INET	|	INSERT	|	INT	|	INTO	|	KEY	|	KEYSPACE	|	KEYSPACES	|	LEVEL	|	LIMIT	|	LIST	|	LOCAL_ONE	|
+LOCAL_QUORUM	|	MAP	|	MODIFY	|	OF	|	ON	|	ONE	|	ORDER	|	PASSWORD	|	PERMISSION	|	PERMISSIONS	|	PRIMARY	|	QUORUM	|	RENAME	|
+REVOKE	|	RECURSIVE	|	SUPERUSER	|	SCHEMA	|	SELECT	|	SET	|	STORAGE	|	SUPERUSER	|	TABLE	|	TEXT	|	TIMESTAMP	|	TIMEUUID	|	TO	|	TOKEN	|	THREE	|	
+TRUNCATE	|	TTL	|	TWO	|	TYPE	|	UNLOGGED	|	UPDATE	|	USE	|	USER	|	USERS	|	USING	|	UUID	|	VALUES	|	VARCHAR	|	VARINT	|	WITH	|	WRITETIME
+Notes:
+1-) case insensitive
+
+<CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<SYMBOL>[<SPACES>]<SELECTOR ITEM>
+
+*<SELECTOR ITEM>	::= [<ITEM NAME> <ACESSOR>] <ITEM NAME> | <INJECT> | <LITERAL>
+
+*<ACESSOR>	::= .
+
+*<ITEM NAME>	::= <ITEM NAME CASE SENSITIVE> | <ITEM NAME CASE INSENSITIVE>
+
+*<ITEM NAME CASE SENSITIVE>	::= "<CHARS>"
+
+*<ITEM NAME CASE INSENSITIVE>	::= <CHARS>   
+Notes:
+1-) If autowrap, output is the same <ITEM NAME CASE SENSITIVE> (Eg: testValue = > "testValue")
+2-) If not autowrap, output is lowercase format (Eg: testValue = > testvalue)
+
+*<INJECT>	::= ?
+
+*<CHARS>		::= [<CHARS>](a-Z0-9)
+
+*<LITERAL>	::= <NUMBER> | <STRING> | <HEXA>
+
+*<HEXA>		::= (a-f)|(A-F)|(0-9)|-[<HEXA>]
+Notes: 
+1-) The position of the hyphen will not be validated	
+
+*<NUMBER>	::= (0-9)[<NUMBER>]
+
+*<STRING>	::= '<INPUT CHARACTER>'
+
+*<INPUT CHARACTER>	:: = (*)
+Notes:
+1-) Any character except ' unless is part of a double quoted ''  
+
+*<SYMBOL>	::= = | + |  - |  / |  * |  ( | ) | { | } | , [ | ]
+
+<COMA>		::= ;
+
+*<WHERE>		::= WHERE
+
+<CONDITION>	::= <WHERE> <SPACES> <CONDITIONS> <SPACES>
+
+<CONDITIONS>	::= <CONDITION-ITEM>[<SPACES> <JOIN CONDITION> <SPACES> <CONDITIONS>]
+
+<JOIN CONDITION>::= <AND> | <OR>
+
+<AND> 		::= AND
+
+<OR>		::= OR
+
+
+*Implementado, apagar depois de todos estarem implementados 19/27
+
+
+Examples:
+
+1-) SELECT * FROM MyColumnFamily;
+
+2-) UPDATE MyColumnFamily SET 'SomeColumn' = 'SomeValue' WHERE KEY = B70DE1D0-9908-4AE3-BE34-5573E5B09F14;

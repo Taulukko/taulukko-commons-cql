@@ -259,8 +259,7 @@ public class LexicalParserTest {
 	}
 
 	/**
-	 * // <CONDITIONS> ::= <SPACES><CONDITION-ITEM>[<SPACES> <JOIN CONDITION>
-	 * <SPACES> <CONDITIONS>]
+	 * // <CONDITIONS> ::= <SPACES><CONDITION-ITEM>[<SPACES> <JOIN CONDITION> <CONDITIONS>]
 	 */
 	@Test
 	public void conditions() throws LexicalParserException {
@@ -270,17 +269,19 @@ public class LexicalParserTest {
 		Token token = lexicalParser.isConditions(cql, false);
 		token = lexicalParser.isConditions(cql, true);
 		Assert.assertNotNull(token);
-		Assert.assertEquals(2, token.getSubTokens().size());
+		Assert.assertEquals(token.getSubTokens().toString(), 2, token
+				.getSubTokens().size());
 		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(0)
 				.getType());
 		Assert.assertEquals(TokenType.CONDITION_ITEM,
 				token.getSubTokens().get(1).getType());
 		Assert.assertEquals(" test", token.getPosContent());
-		cql = " X=3 AND X=3 test";
-		token = lexicalParser.isConditions(cql, true);
+		cql = " X=3 AND Y=3 test";
+		token = lexicalParser.isConditions(cql, false);
 		token = lexicalParser.isConditions(cql, true);
 		Assert.assertNotNull(token);
-		Assert.assertEquals(5, token.getSubTokens().size());
+		Assert.assertEquals(token.getSubTokens().toString(), 5, token
+				.getSubTokens().size());
 		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(0)
 				.getType());
 		Assert.assertEquals(TokenType.CONDITION_ITEM,
@@ -289,9 +290,7 @@ public class LexicalParserTest {
 				.getType());
 		Assert.assertEquals(TokenType.JOIN_CONDITION,
 				token.getSubTokens().get(3).getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(4)
-				.getType());
-		Assert.assertEquals(TokenType.CONDITIONS, token.getSubTokens().get(5)
+		Assert.assertEquals(token.getSubTokens().toString(),TokenType.CONDITIONS, token.getSubTokens().get(4)
 				.getType());
 		Assert.assertEquals(" test", token.getPosContent());
 
@@ -929,8 +928,8 @@ public class LexicalParserTest {
 	}
 
 	/**
-	 * <SELECTOR ITEM> ::= ^<RESERVED WORD> [<ITEM NAME> [<ACESSOR>]] <ITEM
-	 * NAME> | <INJECT> | <LITERAL> | <FUNCTION>
+	 * <SELECTOR ITEM> ::= ^<RESERVED WORD> <ITEM NAME> [<ACESSOR> <ITEM NAME>]
+	 * | <INJECT> | <LITERAL> | <FUNCTION>
 	 */
 	@Test
 	public void selectorItem() throws LexicalParserException {
@@ -970,11 +969,12 @@ public class LexicalParserTest {
 		token = lexicalParser.isSelectorItem(cql, true);
 		token = lexicalParser.isSelectorItem(cql, false);
 		Assert.assertNotNull(token);
-		Assert.assertEquals("1234abcde", token.getContent());
-		Assert.assertEquals(" adsfasdf ", token.getPosContent());
 		Assert.assertEquals(TokenType.SELECTOR_ITEM, token.getType());
+		Assert.assertEquals(1, token.getSubTokens().size());
 		Assert.assertEquals(TokenType.ITEMNAME, token.getSubTokens().get(0)
 				.getType());
+		Assert.assertEquals("1234abcde", token.getContent());
+		Assert.assertEquals(" adsfasdf ", token.getPosContent());
 
 		cql = "? afd adsf adsfasdf ";
 		token = lexicalParser.isSelectorItem(cql, true);

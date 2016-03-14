@@ -301,7 +301,7 @@ public class LexicalParser {
 			token.getSubTokens().add(left);
 		}
 
-		Token tokenSymbol = isSymbol(left.getPosContent(), required);
+		Token tokenSymbol = isSymbol(left.getPosContent(), false);
 		if (tokenSymbol == null) {
 			if (required) {
 				buildLexicalParserException(token, text, "Expected SYMBOL");
@@ -322,13 +322,8 @@ public class LexicalParser {
 			token.getSubTokens().add(left);
 		}
 
-		Token tokenSelectorItem2 = isSelectorItem(left.getPosContent(),
-				required);
+		Token tokenSelectorItem2 = isSelectorItem(left.getPosContent(), false);
 		if (tokenSelectorItem2 == null) {
-			if (required) {
-				buildLexicalParserException(token, text,
-						"Expected SELECTOR ITEM");
-			}
 			return null;
 		}
 
@@ -343,16 +338,18 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <CONDITIONS> ::= <SPACES><CONDITION-ITEM>[<SPACES> <JOIN CONDITION>
-	// <SPACES>
-	// <CONDITIONS>]
+	// <CONDITIONS> ::= <SPACES><CONDITION-ITEM>[<SPACES> <JOIN CONDITION><CONDITIONS>]
 	public Token isConditions(String text, boolean required)
 			throws LexicalParserException {
 		Token left = null;
 		Token token = new Token(TokenType.CONDITIONS);
 		String content = text;
 
-		Token tokenSpaces = isSpaces(text, false);
+		Token tokenOptionalSpace = null;
+		Token tokenOptionalJoin = null;
+		Token tokenOptionalConditions = null;
+
+		Token tokenSpaces = isSpaces(text, required);
 		left = tokenSpaces;
 
 		if (left == null) {
@@ -362,7 +359,10 @@ public class LexicalParser {
 			return null;
 		}
 
-		Token tokenConditionItem = isConditionItem(text, required);
+		token.getSubTokens().add(left);
+
+		Token tokenConditionItem = isConditionItem(left.getPosContent(),
+				required);
 		updateNeighbors(left, tokenConditionItem);
 		left = tokenConditionItem;
 
@@ -375,63 +375,46 @@ public class LexicalParser {
 
 		token.getSubTokens().add(left);
 
-		tokenSpaces = isSpaces(text, false);
+		tokenOptionalSpace = isSpaces(left.getPosContent(), false);
 
-		if (tokenSpaces == null) {
-			content = content.substring(0, left.getPosContent().length());
-			token.setContent(content);
-			token.setPosContent(left.getPosContent());
-			return token;
-		}
+		if (tokenOptionalSpace != null) {
+			tokenOptionalJoin = isJoinCondition(tokenOptionalSpace.getPosContent(),
+					false);
 
-		updateNeighbors(left, tokenSpaces);
-		left = tokenSpaces;
+			if (tokenOptionalJoin != null) {
+					tokenOptionalConditions = isConditions(
+							tokenOptionalJoin.getPosContent(), false);
 
-		text = left.getPosContent();
-		token.getSubTokens().add(left);
+					if (tokenOptionalConditions != null) {
 
-		Token tokenJoinCondition = isJoinCondition(text, required);
+						updateNeighbors(left, tokenOptionalSpace);
+						left = tokenOptionalSpace;
+						token.getSubTokens().add(tokenOptionalSpace);
 
-		if (tokenJoinCondition == null) {
-			content = content.substring(0, left.getPosContent().length());
-			token.setContent(content);
-			token.setPosContent(token.getPosContent());
-			return token;
-		}
+						updateNeighbors(left, tokenOptionalJoin);
+						left = tokenOptionalJoin;
+						token.getSubTokens().add(tokenOptionalJoin);
 
-		updateNeighbors(left, tokenJoinCondition);
-		left = tokenJoinCondition;
-		token.getSubTokens().add(left);
-		text = left.getPosContent();
+						updateNeighbors(left, tokenOptionalConditions);
+						left = tokenOptionalConditions;
+						token.getSubTokens().add(tokenOptionalConditions);
 
-		tokenSpaces = isSpaces(text, false);
+						content = content.substring(0, tokenOptionalConditions
+								.getPosContent().length());
+						token.setContent(content);
+						token.setPosContent(tokenOptionalConditions
+								.getPosContent());
+						return token;
+					}
+				}
 
-		if (tokenSpaces == null) {
-			content = content.substring(0, left.getPosContent().length());
-			token.setContent(content);
-			token.setPosContent(token.getPosContent());
-			return token;
-		}
+			} 
 
-		updateNeighbors(left, tokenSpaces);
-		left = tokenSpaces;
-		token.getSubTokens().add(left);
-		text = left.getPosContent();
-
-		Token tokenConditions = isConditions(text, false);
-
-		if (tokenConditions == null) {
-			content = content.substring(0, left.getPosContent().length());
-			token.setContent(content);
-			token.setPosContent(token.getPosContent());
-			return token;
-		}
-
-		updateNeighbors(left, tokenConditions);
-		left = tokenConditions;
-		token.getSubTokens().add(left);
-
+		content = content.substring(0, left.getPosContent().length());
+		token.setContent(content);
+		token.setPosContent(left.getPosContent());
 		return token;
+
 	}
 
 	// <CQL> ::= [<SPACES>] <COMMAND> [ <SPACES> <CONDITION> ] [ <SPACES>]
@@ -895,12 +878,22 @@ public class LexicalParser {
 	// <JOIN CONDITION>::= <AND> | <OR>
 	public Token isJoinCondition(String text, boolean required)
 			throws LexicalParserException {
+		Token token  = new Token(TokenType.JOIN_CONDITION);
 
-		Token token = isAnd(text, false);
-		if (token == null) {
-			token = isOr(text, required);
+		Token left = isAnd(text, false);
+		if (left == null) {
+			left = isOr(text, required);
+		}
+		
+		if(left==null)
+		{
+			return null;
 		}
 
+		token.getSubTokens().add(left);
+		token.setPosContent(left.getPosContent());
+		token.setContent(left.getContent());
+		
 		return token;
 
 	}
@@ -1148,8 +1141,8 @@ public class LexicalParser {
 
 	}
 
-	// <SELECTOR ITEM> ::= ^<RESERVED WORD> [<ITEM NAME> [<ACESSOR>]] <ITEM
-	// NAME> | <INJECT> | <LITERAL> | <FUNCTION>
+	// <SELECTOR ITEM> ::= ^<RESERVED WORD>( <ITEM NAME> [<ACESSOR> <ITEM NAME>]
+	// | <INJECT> | <LITERAL> | <FUNCTION>)
 	public Token isSelectorItem(String text, boolean required)
 			throws LexicalParserException {
 
@@ -1180,17 +1173,25 @@ public class LexicalParser {
 
 				updateNeighbors(left, tokenAcessor);
 				left = tokenAcessor;
-				token.getSubTokens().add(left);
+
+				tokenItemName = isItemName(left.getPosContent(), false);
+
+				if (tokenItemName != null) {
+					token.getSubTokens().add(left);
+
+					updateNeighbors(left, tokenItemName);
+					left = tokenItemName;
+					token.getSubTokens().add(left);
+
+				}
 
 			}
-		}
 
-		tokenItemName = isItemName(text, false);
-
-		if (tokenItemName != null) {
-			updateNeighbors(left, tokenItemName);
-			left = tokenItemName;
-			token.getSubTokens().add(left);
+			content = content.substring(0, content.length()
+					- left.getPosContent().length());
+			token.setContent(content);
+			token.setPosContent(left.getPosContent());
+			return token;
 		}
 
 		Token tokenInject = isInject(text, false);

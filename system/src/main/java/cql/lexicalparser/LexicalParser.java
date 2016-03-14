@@ -265,7 +265,7 @@ public class LexicalParser {
 
 		token.getSubTokens().add(left);
 
-		content = content.substring(0, left.getPosContent().length());
+		content = content.substring(0, content.length() - left.getPosContent().length());
 		token.setContent(content);
 		token.setPosContent(left.getPosContent());
 		return token;
@@ -399,8 +399,7 @@ public class LexicalParser {
 						left = tokenOptionalConditions;
 						token.getSubTokens().add(tokenOptionalConditions);
 
-						content = content.substring(0, tokenOptionalConditions
-								.getPosContent().length());
+						content = content.substring(0, content.length() - tokenOptionalConditions.getPosContent().length());
 						token.setContent(content);
 						token.setPosContent(tokenOptionalConditions
 								.getPosContent());

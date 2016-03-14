@@ -191,21 +191,19 @@ public class LexicalParserTest {
 		Assert.assertNull(lexicalParser.isCondition(cql, false));
 		cql = "WHEREX=3 AND X=5 test";
 		Assert.assertNull(lexicalParser.isCondition(cql, false));
-		cql = "WHERE X=3 AND X=5test";
-		Assert.assertNull(lexicalParser.isCondition(cql, false));
 		cql = "WHERE    X=3 AND X=5   test";
 		Token token = lexicalParser.isCondition(cql, false);
 		token = lexicalParser.isCondition(cql, true);
 		Assert.assertNotNull(token);
 		Assert.assertEquals(token.getType(), TokenType.CONDITION);
 		Assert.assertEquals(2, token.getSubTokens().size());
-		Assert.assertEquals("test", token.getPosContent());
-		Assert.assertEquals("WHERE    X=3 AND X=5   ", token.getContent());
+		Assert.assertEquals("   test", token.getPosContent());
+		Assert.assertEquals("WHERE    X=3 AND X=5", token.getContent());
 		Assert.assertEquals("WHERE", token.getSubTokens().get(0).getContent());
-		Assert.assertEquals("    ", token.getSubTokens().get(1).getContent());
-		Assert.assertEquals("X=3 AND X=5", token.getSubTokens().get(2)
+
+		Assert.assertEquals("    X=3 AND X=5", token.getSubTokens().get(1)
 				.getContent());
-		Assert.assertEquals("   ", token.getSubTokens().get(3).getContent());
+		Assert.assertEquals("    ", token.getSubTokens().get(1).getSubTokens().get(0).getContent());
 
 	}
 

@@ -115,20 +115,26 @@ public class LexicalParser {
 
 	}
 
-	// <CHARS> ::= [<CHARS>](a-Z0-9)
+	// <CHARS> ::= ^<EMPTY>[<CHARS>](a-Z0-9)
 	public Token isChars(String text, boolean required)
 			throws LexicalParserException {
 		Token token = new Token(TokenType.CHARS);
 
 		StringBuffer content = new StringBuffer();
 
-		for (int index = 0; index < text.length(); index++) {
-			char character = text.charAt(index);
-			boolean characterSmall = character >= 'a' && character <= 'z';
-			boolean characterBig = character >= 'A' && character <= 'Z';
-			boolean number = character >= '0' && character <= '9';
+		if (text.isEmpty()) {
+			if (required) {
+				buildLexicalParserException(token, text);
+			}
+			return null;
+		}
 
-			if (!characterSmall && !characterBig && !number) {
+		for (int index = 0; index < text.length(); index++) {
+			Character character = text.charAt(index);
+			boolean valid = Character.isAlphabetic(text.codePointAt(index))
+					|| Character.isDigit(text.codePointAt(index));
+
+			if (!valid) {
 				if (content.length() > 0) {
 					break;
 				}
@@ -265,7 +271,8 @@ public class LexicalParser {
 
 		token.getSubTokens().add(left);
 
-		content = content.substring(0, content.length() - left.getPosContent().length());
+		content = content.substring(0, content.length()
+				- left.getPosContent().length());
 		token.setContent(content);
 		token.setPosContent(left.getPosContent());
 		return token;
@@ -314,7 +321,7 @@ public class LexicalParser {
 		text = left.getPosContent();
 		token.getSubTokens().add(left);
 
-		tokenSpaces = isSpaces(text, false);
+		tokenSpaces = isSpaces(left.getPosContent(), false);
 		if (tokenSpaces != null) {
 			updateNeighbors(left, tokenSpaces);
 			left = tokenSpaces;
@@ -330,6 +337,7 @@ public class LexicalParser {
 		updateNeighbors(left, tokenSelectorItem2);
 		left = tokenSelectorItem2;
 		text = left.getPosContent();
+		token.getSubTokens().add(left);
 
 		content = content.substring(0, content.length()
 				- left.getPosContent().length());
@@ -338,7 +346,8 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <CONDITIONS> ::= <SPACES><CONDITION-ITEM>[<SPACES> <JOIN CONDITION><CONDITIONS>]
+	// <CONDITIONS> ::= <SPACES><CONDITION-ITEM>[<SPACES> <JOIN
+	// CONDITION><CONDITIONS>]
 	public Token isConditions(String text, boolean required)
 			throws LexicalParserException {
 		Token left = null;
@@ -378,36 +387,36 @@ public class LexicalParser {
 		tokenOptionalSpace = isSpaces(left.getPosContent(), false);
 
 		if (tokenOptionalSpace != null) {
-			tokenOptionalJoin = isJoinCondition(tokenOptionalSpace.getPosContent(),
-					false);
+			tokenOptionalJoin = isJoinCondition(
+					tokenOptionalSpace.getPosContent(), false);
 
 			if (tokenOptionalJoin != null) {
-					tokenOptionalConditions = isConditions(
-							tokenOptionalJoin.getPosContent(), false);
+				tokenOptionalConditions = isConditions(
+						tokenOptionalJoin.getPosContent(), false);
 
-					if (tokenOptionalConditions != null) {
+				if (tokenOptionalConditions != null) {
 
-						updateNeighbors(left, tokenOptionalSpace);
-						left = tokenOptionalSpace;
-						token.getSubTokens().add(tokenOptionalSpace);
+					updateNeighbors(left, tokenOptionalSpace);
+					left = tokenOptionalSpace;
+					token.getSubTokens().add(tokenOptionalSpace);
 
-						updateNeighbors(left, tokenOptionalJoin);
-						left = tokenOptionalJoin;
-						token.getSubTokens().add(tokenOptionalJoin);
+					updateNeighbors(left, tokenOptionalJoin);
+					left = tokenOptionalJoin;
+					token.getSubTokens().add(tokenOptionalJoin);
 
-						updateNeighbors(left, tokenOptionalConditions);
-						left = tokenOptionalConditions;
-						token.getSubTokens().add(tokenOptionalConditions);
+					updateNeighbors(left, tokenOptionalConditions);
+					left = tokenOptionalConditions;
+					token.getSubTokens().add(tokenOptionalConditions);
 
-						content = content.substring(0, content.length() - tokenOptionalConditions.getPosContent().length());
-						token.setContent(content);
-						token.setPosContent(tokenOptionalConditions
-								.getPosContent());
-						return token;
-					}
+					content = content.substring(0, content.length()
+							- tokenOptionalConditions.getPosContent().length());
+					token.setContent(content);
+					token.setPosContent(tokenOptionalConditions.getPosContent());
+					return token;
 				}
+			}
 
-			} 
+		}
 
 		content = content.substring(0, left.getPosContent().length());
 		token.setContent(content);
@@ -877,27 +886,29 @@ public class LexicalParser {
 	// <JOIN CONDITION>::= <AND> | <OR>
 	public Token isJoinCondition(String text, boolean required)
 			throws LexicalParserException {
-		Token token  = new Token(TokenType.JOIN_CONDITION);
+		Token token = new Token(TokenType.JOIN_CONDITION);
 
 		Token left = isAnd(text, false);
 		if (left == null) {
 			left = isOr(text, required);
 		}
-		
-		if(left==null)
-		{
+
+		if (left == null) {
 			return null;
 		}
 
 		token.getSubTokens().add(left);
 		token.setPosContent(left.getPosContent());
 		token.setContent(left.getContent());
-		
+
 		return token;
 
 	}
 
-	// <LITERAL> ::= <NUMBER> | <STRING> | <HEXA>
+	/**
+	 * <LITERAL> ::= (<NUMBER> | <STRING> | <HEXA>)^<CHARS>
+	 */
+
 	public Token isLiteral(String text, boolean required)
 			throws LexicalParserException {
 
@@ -917,6 +928,14 @@ public class LexicalParser {
 			token.setContent(tokenNumber.getContent());
 			token.setPosContent(tokenNumber.getPosContent());
 			token.getSubTokens().add(tokenNumber);
+
+			if (isChars(token.getPosContent(), false) != null) {
+				if (required) {
+					buildLexicalParserException(token, text);
+				} else {
+					return null;
+				}
+			}
 			return token;
 		}
 
@@ -926,6 +945,13 @@ public class LexicalParser {
 			token.setContent(tokenString.getContent());
 			token.setPosContent(tokenString.getPosContent());
 			token.getSubTokens().add(tokenString);
+			if (isChars(token.getPosContent(), false) != null) {
+				if (required) {
+					buildLexicalParserException(token, text);
+				} else {
+					return null;
+				}
+			}
 			return token;
 		}
 
@@ -937,10 +963,17 @@ public class LexicalParser {
 		token.setContent(tokenHexa.getContent());
 		token.setPosContent(tokenHexa.getPosContent());
 		token.getSubTokens().add(tokenHexa);
+		if (isChars(token.getPosContent(), false) != null) {
+			if (required) {
+				buildLexicalParserException(token, text);
+			} else {
+				return null;
+			}
+		}
 		return token;
 	}
 
-	// *<NUMBER> ::= (0-9)[<NUMBER>]
+	// <NUMBER> ::= (0-9)^<CHARS>[<NUMBER>]
 	public Token isNumber(String text, boolean required)
 			throws LexicalParserException {
 
@@ -954,6 +987,14 @@ public class LexicalParser {
 
 			if (!number) {
 				if (content.length() > 0) {
+
+					// ^Chars
+					if (Character.isAlphabetic(text.codePointAt(index))) {
+						if (required) {
+							buildLexicalParserException(token, text);
+						}
+						return null;
+					}
 					break;
 				}
 				if (required) {
@@ -1140,8 +1181,10 @@ public class LexicalParser {
 
 	}
 
-	// <SELECTOR ITEM> ::= ^<RESERVED WORD>( <ITEM NAME> [<ACESSOR> <ITEM NAME>]
-	// | <INJECT> | <LITERAL> | <FUNCTION>)
+	/**
+	 * <SELECTOR ITEM> ::= ^<RESERVED WORD> (<LITERAL> |<ITEM NAME> [<ACESSOR>
+	 * <ITEM NAME>] | <INJECT> | <FUNCTION>)
+	 */
 	public Token isSelectorItem(String text, boolean required)
 			throws LexicalParserException {
 
@@ -1158,6 +1201,19 @@ public class LexicalParser {
 			} else {
 				return null;
 			}
+		}
+
+		Token tokenLiteral = isLiteral(text, false);
+
+		if (tokenLiteral != null) {
+			left = tokenLiteral;
+			token.getSubTokens().add(left);
+			content = content.substring(0, content.length()
+					- left.getPosContent().length());
+			token.setContent(content);
+			token.setPosContent(left.getPosContent());
+
+			return token;
 		}
 
 		Token tokenItemName = isItemName(text, false);
@@ -1197,20 +1253,6 @@ public class LexicalParser {
 		if (tokenInject != null) {
 			updateNeighbors(left, tokenInject);
 			left = tokenInject;
-			token.getSubTokens().add(left);
-			content = content.substring(0, content.length()
-					- left.getPosContent().length());
-			token.setContent(content);
-			token.setPosContent(left.getPosContent());
-
-			return token;
-		}
-
-		Token tokenLiteral = isLiteral(text, false);
-
-		if (tokenLiteral != null) {
-			updateNeighbors(left, tokenLiteral);
-			left = tokenLiteral;
 			token.getSubTokens().add(left);
 			content = content.substring(0, content.length()
 					- left.getPosContent().length());

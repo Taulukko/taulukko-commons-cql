@@ -245,15 +245,18 @@ public class LexicalParserTest {
 
 		Assert.assertTrue(hasSymbol);
 
-		int selectItem = 0;
+		Assert.assertEquals(5, token.getSubTokens().size());
+		
+		Assert.assertEquals(TokenType.SELECTOR_ITEM, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(2).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(3).getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM, token.getSubTokens().get(4).getType());
+		Assert.assertEquals(TokenType.LITERAL,  token.getSubTokens().get(4).getSubTokens().get(0).getType());
+		 
 
-		for (Token child : token.getSubTokens()) {
-			if (child.getType().equals(TokenType.SELECTOR_ITEM)) {
-				selectItem++;
-				continue;
-			}
-		}
-		Assert.assertEquals(1, selectItem);
+		
+		
 	}
 
 	/**
@@ -435,13 +438,17 @@ public class LexicalParserTest {
 	 */
 	@Test
 	public void inputCharacterExeptSingle() throws LexicalParserException {
-		String cql = ". teste";
+		String cql = ". ";
 		Token token = lexicalParser.isInputCharacterExceptSingle(cql, true);
 		token = lexicalParser.isInputCharacterExceptSingle(cql, false);
 
 		Assert.assertNotNull(token);
-		Assert.assertEquals(". teste", token.getContent());
+		Assert.assertEquals(". ", token.getContent());
 		Assert.assertEquals("", token.getPosContent());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
+				token.getType());
+		Assert.assertEquals(1, token.getSubTokens().size());
+		token = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
 				token.getType());
 		Assert.assertEquals(0, token.getSubTokens().size());
@@ -452,9 +459,11 @@ public class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals("teste", token.getContent());
 		Assert.assertEquals("'teste", token.getPosContent());
+		
+		token = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
 				token.getType());
-		Assert.assertEquals(0, token.getSubTokens().size());
+		
 
 		cql = "teste''teste";
 		token = lexicalParser.isInputCharacterExceptSingle(cql, true);
@@ -464,7 +473,11 @@ public class LexicalParserTest {
 		Assert.assertEquals("", token.getPosContent());
 		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
 				token.getType());
-		Assert.assertEquals(0, token.getSubTokens().size());
+		
+		token = token.getSubTokens().get(0);
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
+				token.getType());
+		
 
 		cql = "teste''teste'teste";
 		token = lexicalParser.isInputCharacterExceptSingle(cql, true);
@@ -474,7 +487,11 @@ public class LexicalParserTest {
 		Assert.assertEquals("'teste", token.getPosContent());
 		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
 				token.getType());
-		Assert.assertEquals(0, token.getSubTokens().size());
+		
+		token = token.getSubTokens().get(0);
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
+				token.getType());
+		
 	}
 
 	/**
@@ -492,17 +509,25 @@ public class LexicalParserTest {
 		Assert.assertEquals("", token.getPosContent());
 		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
 				token.getType());
-		Assert.assertEquals(0, token.getSubTokens().size());
+		
+		token = token.getSubTokens().get(0);
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
+				token.getType());
+		
 
 		cql = "teste'teste";
 		token = lexicalParser.isInputCharacterExceptDouble(cql, true);
 		token = lexicalParser.isInputCharacterExceptDouble(cql, false);
 		Assert.assertNotNull(token);
-		Assert.assertEquals("teste", token.getContent());
-		Assert.assertEquals("'teste", token.getPosContent());
+		Assert.assertEquals("teste'teste", token.getContent());
+		Assert.assertEquals("", token.getPosContent());
 		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
 				token.getType());
-		Assert.assertEquals(0, token.getSubTokens().size());
+		
+		token = token.getSubTokens().get(0);
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
+				token.getType());
+
 
 		cql = "teste''teste";
 		token = lexicalParser.isInputCharacterExceptDouble(cql, true);
@@ -512,17 +537,25 @@ public class LexicalParserTest {
 		Assert.assertEquals("", token.getPosContent());
 		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
 				token.getType());
-		Assert.assertEquals(0, token.getSubTokens().size());
+		
+		token = token.getSubTokens().get(0);
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
+				token.getType());
+
 
 		cql = "teste''teste'teste";
 		token = lexicalParser.isInputCharacterExceptDouble(cql, true);
 		token = lexicalParser.isInputCharacterExceptDouble(cql, false);
 		Assert.assertNotNull(token);
-		Assert.assertEquals("teste''teste", token.getContent());
-		Assert.assertEquals("'teste", token.getPosContent());
+		Assert.assertEquals("teste''teste'teste", token.getContent());
+		Assert.assertEquals("", token.getPosContent());
 		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
 				token.getType());
-		Assert.assertEquals(0, token.getSubTokens().size());
+		
+		token = token.getSubTokens().get(0);
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
+				token.getType());
+
 	}
 
 	// <ITEM NAME> ::= <ITEM NAME CASE SENSITIVE> | <ITEM NAME CASE INSENSITIVE>
@@ -532,14 +565,6 @@ public class LexicalParserTest {
 		Token token = lexicalParser.isItemName(cql, false);
 		Assert.assertNull(token);
 
-		cql = "\"é1234abcde\" adsfasdf ";
-		token = lexicalParser.isItemName(cql, false);
-		Assert.assertNull(token);
-
-		cql = "\"1234Éabcde\" adsfasdf ";
-		token = lexicalParser.isItemName(cql, false);
-		Assert.assertNull(token);
-
 		cql = "\"1234abcde²\" adsfasdf ";
 		token = lexicalParser.isItemName(cql, false);
 		Assert.assertNull(token);
@@ -547,6 +572,13 @@ public class LexicalParserTest {
 		cql = "\"1234abcde$\" adsfasdf ";
 		token = lexicalParser.isItemName(cql, false);
 		Assert.assertNull(token);
+		
+		cql = "\"é1234abcde\" adsfasdf ";
+		token = lexicalParser.isItemName(cql, true);
+		Assert.assertEquals(TokenType.ITEMNAME, token.getType());
+		Assert.assertEquals(TokenType.ITEM_NAME_CASE_SENSITIVE, token
+				.getSubTokens().get(0).getType());
+		
 
 		cql = "\"1234abcde\" adsfasdf ";
 		token = lexicalParser.isItemName(cql, true);
@@ -580,14 +612,6 @@ public class LexicalParserTest {
 		Token token = lexicalParser.isItemNameCaseSensitive(cql, false);
 		Assert.assertNull(token);
 
-		cql = "\"é1234abcde\" adsfasdf ";
-		token = lexicalParser.isItemNameCaseSensitive(cql, false);
-		Assert.assertNull(token);
-
-		cql = "\"1234Éabcde\" adsfasdf ";
-		token = lexicalParser.isItemNameCaseSensitive(cql, false);
-		Assert.assertNull(token);
-
 		cql = "\"1234abcde²\" adsfasdf ";
 		token = lexicalParser.isItemNameCaseSensitive(cql, false);
 		Assert.assertNull(token);
@@ -596,6 +620,13 @@ public class LexicalParserTest {
 		token = lexicalParser.isItemNameCaseSensitive(cql, false);
 		Assert.assertNull(token);
 
+		cql = "\"é1234abcde\" adsfasdf ";
+		token = lexicalParser.isItemNameCaseSensitive(cql, false);
+		Assert.assertEquals("\"é1234abcde\"", token.getContent());
+		Assert.assertEquals(TokenType.ITEM_NAME_CASE_SENSITIVE, token.getType());
+		Assert.assertEquals(TokenType.CHARS, token.getSubTokens().get(0)
+				.getType());
+		
 		cql = "\"1234abcde\" adsfasdf ";
 		token = lexicalParser.isItemNameCaseSensitive(cql, true);
 		token = lexicalParser.isItemNameCaseSensitive(cql, false);
@@ -615,8 +646,7 @@ public class LexicalParserTest {
 	}
 
 	/**
-	 * <INPUT CHARACTER> :: = (*) Notes: 1-) Any character except ' unless is
-	 * part of a double quoted ''
+	 * <LITERAL>	::= (<NUMBER> | <STRING> | <HEXA>)^<CHARS>
 	 */
 	@Test
 	public void literal() throws LexicalParserException {
@@ -625,7 +655,10 @@ public class LexicalParserTest {
 
 		cql = "'. teste";
 		Assert.assertNull(lexicalParser.isLiteral(cql, false));
-
+		
+		cql = "3abdcd";
+		Assert.assertNull(lexicalParser.isLiteral(cql, false));
+		
 		cql = ". teste'";
 		Assert.assertNull(lexicalParser.isLiteral(cql, false));
 
@@ -663,27 +696,11 @@ public class LexicalParserTest {
 
 		cql = "1234Éabcde adsfasdf ";
 		token = lexicalParser.isLiteral(cql, false);
-		Assert.assertNotNull(token);
-		Assert.assertEquals("1234", token.getContent());
-		Assert.assertEquals("Éabcde adsfasdf ", token.getPosContent());
-		Assert.assertEquals(TokenType.LITERAL, token.getType());
-		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.NUMBER, token.getSubTokens().get(0)
-				.getType());
-
-		cql = "1234abc1-3 1234Éabcde adsfasdf ";
-		token = lexicalParser.isLiteral(cql, false);
-		Assert.assertNotNull(token);
-		Assert.assertEquals("1234", token.getContent());
-		Assert.assertEquals("abc1-3 1234Éabcde adsfasdf ",
-				token.getPosContent());
-		Assert.assertEquals(TokenType.LITERAL, token.getType());
-		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.NUMBER, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertNull(token);
 
 	}
 
+	//<NUMBER>	::= (0-9)^<CHARS>[<NUMBER>]
 	@Test
 	public void number() throws LexicalParserException {
 		String cql = " 1234abcde adsfasdf ";
@@ -696,10 +713,7 @@ public class LexicalParserTest {
 
 		cql = "1234Éabcde adsfasdf ";
 		token = lexicalParser.isNumber(cql, false);
-		Assert.assertNotNull(token);
-		Assert.assertEquals("1234", token.getContent());
-		Assert.assertEquals("Éabcde adsfasdf ", token.getPosContent());
-		Assert.assertEquals(TokenType.NUMBER, token.getType());
+		Assert.assertNull(token);
 
 	}
 
@@ -926,8 +940,7 @@ public class LexicalParserTest {
 	}
 
 	/**
-	 * <SELECTOR ITEM> ::= ^<RESERVED WORD> <ITEM NAME> [<ACESSOR> <ITEM NAME>]
-	 * | <INJECT> | <LITERAL> | <FUNCTION>
+	 * <SELECTOR ITEM> ::= ^<RESERVED WORD>  (<LITERAL> |<ITEM NAME> [<ACESSOR> <ITEM NAME>] | <INJECT> | <FUNCTION>)
 	 */
 	@Test
 	public void selectorItem() throws LexicalParserException {
@@ -936,7 +949,8 @@ public class LexicalParserTest {
 
 		cql = "'. teste";
 		Assert.assertNull(lexicalParser.isSelectorItem(cql, false));
-
+		
+		
 		cql = ". teste'";
 		Assert.assertNull(lexicalParser.isSelectorItem(cql, false));
 
@@ -951,6 +965,13 @@ public class LexicalParserTest {
 		Assert.assertEquals(1, token.getSubTokens().size());
 		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0)
 				.getType());
+		
+		cql = "3";
+		token = lexicalParser.isSelectorItem(cql, true);
+		token = lexicalParser.isSelectorItem(cql, false);
+		Assert.assertEquals(1, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0).getType());
+		
 		cql = "'. \n adf '' ; * ?  teste' 123'";
 		token = lexicalParser.isSelectorItem(cql, true);
 		token = lexicalParser.isSelectorItem(cql, false);
@@ -1039,6 +1060,45 @@ public class LexicalParserTest {
 		Assert.assertEquals(TokenType.SPACES, token.getType());
 
 	}
+
+	//<CHARS>		::= ^<EMPTY>[<CHARS>](a-Z0-9)
+	@Test
+	public void chars() throws LexicalParserException {
+		String cql = "afasdf";
+		Token token= lexicalParser.isChars(cql, true);		
+		Assert.assertNotNull(token);
+		
+		cql = "afasdf342";
+		token= lexicalParser.isChars(cql, true);		
+		Assert.assertNotNull(token);
+		
+		cql = "234afasdf342";
+		token= lexicalParser.isChars(cql, true);		
+		Assert.assertNotNull(token);
+
+		cql = "234afasdf";
+		token= lexicalParser.isChars(cql, true);		
+		Assert.assertNotNull(token);
+		
+
+		cql = "éasdfasdfçã";
+		token= lexicalParser.isChars(cql, true);		
+		Assert.assertNotNull(token);
+		
+		cql = " teste ";
+		token= lexicalParser.isChars(cql, false);		
+		Assert.assertNull(token);
+		
+		cql = " ";
+		token= lexicalParser.isChars(cql, false);		
+		Assert.assertNull(token);
+		
+		cql = "";
+		token= lexicalParser.isChars(cql, false);		
+		Assert.assertNull(token);
+
+	}
+	
 
 	// <START_PARAMETERS>::=(
 	@Test

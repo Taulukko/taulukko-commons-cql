@@ -7,9 +7,18 @@ Notes:
 
 1-) u(TOKEN) means an uncasesensitive token
 2-) ^TOKEN means a not token
-3-) %s any text
+4-) []n eg: [...]¹,[...]² ..... - mutual option or mutal required. Each part cannot appears alone.
 
 OFICIAL BNF: https://cassandra.apache.org/doc/cql/CQL.html
+ 
+
+TODO 1-) Corrigir hexa
+
+TODO 2-) Corrigir o conditions pois ele aceita alias
+
+TODO 3-) Numa versão 3 usar o BNF oficial
+
+
 
 
 <CQL>		::= [<SPACES>] <COMMAND> [ <SPACES> <CONDITION>  ] [ <SPACES>] [<DOT COMMA> [<SPACES>]]
@@ -24,8 +33,17 @@ Notes:
 Notes: 
 1-) only content between ""
 
+<COMMAND>	::= <INSERT COMMAND> | <OTHER COMMAND>
 
-<COMMAND>	::= <RESERVED WORDS>  [<SELECTOR BLOCK>] [<SPACES>] [<SYMBOL>] [<SPACES>]  [<LITERAL>] [<SPACES>] [<COMMAND>]
+<OTHER COMMAND> ::= ^<WHERE> <RESERVED WORDS> [<SPACES>] (<SELECTOR BLOCK> | (  [<SYMBOL>] [<SPACES>]  [<LITERAL>] )[<SPACES>] ) [[<SPACES>]<OTHER COMMAND>]
+
+<INSERT COMMAND>	::= <INSERT> <SPACES> [<INTO> <SPACES>] <SELECTOR ITEM>  [<SPACES>]  <START_PARAMETERS> [<SPACES>]  <SELECTOR BLOCK>  [<SPACES>] <END_PARAMETERS>  [<SPACES>] <VALUES> [<SPACES>]  <START_PARAMETERS> [<SPACES>]  [<SELECTOR BLOCK>]  [<SPACES>] <END_PARAMETERS>
+
+<INTO> ::= u(INTO)
+
+<INSERT> ::= u(INSERT)
+
+<VALUES> ::= u(VALUES)
 
 <RESERVED WORDS>::= <RESERVED WORD> [<SPACES> <RESERVED WORDS>]
 
@@ -44,22 +62,38 @@ Notes:
 
 <END_PARAMETERS>::=)
 
+<START ARRAY>::=[
+<END ARRAY>::=]
+
+<START MAP>::={
+<END MAP>::=}
+
 <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<SYMBOL>[<SPACES>]<SELECTOR ITEM>
 
-<SELECTOR BLOCK> ::= [<SPACES>] <SELECTOR ITEM> [<SPACES>] [<COMMA><SELECTOR BLOCK>]
+
+<SELECTOR BLOCK> ::=  ^<WHERE> <SELECTOR ITEM>  [[<SPACES>] <COMMA> [<SPACES>] <SELECTOR BLOCK>]
+
+<SELECTOR ITEM> ::= ^<RESERVED WORD>  (<FUNCTION> | <LITERAL> |<ITEM NAME> [<ACESSOR> <FIELD NAME>] |  <ARRAY> | <MAP>)[<SPACES><ALIAS>]
+
+<ALIAS> ::= [<AS> <SPACES>] <FIELD NAME>
+
+<FIELD NAME>	::=  ^<RESERVED WORD> (<ITEM NAME CASE SENSITIVE> | <ITEM NAME CASE INSENSITIVE>)
+
+<AS> :: = AS
+
+<ARRAY> ::= <START ARRAY>[<SPACES>][<SELECTOR BLOCK>][<SPACES>]<END ARRAY>
+
+<MAP> ::= <START MAP>[<SPACES>][<PROPERTIES>][<SPACES>]<END MAP>
+
+<PROPERTIES> ::= <PROPERTY> [[<SPACES>]<COMMA>[<SPACES>] <PROPERTIES>]
+
+<PROPERTY> ::= <KEY>[<SPACES>]<DOUBLE DOT>[<SPACES>](<LITERAL>|
+
+<DOUBLE DOT> ::= :
+
+<KEY> ::= <CHARS>|<LITERAL>
 
 
-
-
-TODO 1-) Faltou corrigir os que estão com erro, do menor pro mais complexo
-
-TODO 2-) Faltou o teste de Alias
-
-TODO 3-) Acredito que existam tokens faltantes, fazer os testes desses  
-
-TODO 4-) Alias =><SELECTOR ITEM> ::= ^<RESERVED WORD>  (<LITERAL> |<ITEM NAME> [<ACESSOR> <ITEM NAME>] | <INJECT> | <FUNCTION>)
- 
-TODO 5-) Faltou também varrer o LexicalParser em busca de erros, principalmente falta de updateNeibors ou falta de addSubTokens
 
 <ACESSOR>	::= .
 
@@ -67,7 +101,7 @@ TODO 5-) Faltou também varrer o LexicalParser em busca de erros, principalmente
 
 <ITEM NAME CASE SENSITIVE>	::= "<CHARS>" 
 
-<ITEM NAME CASE INSENSITIVE>	::= <CHARS>   
+<ITEM NAME CASE INSENSITIVE>	::= ^<NUMBER> <CHARS>   
 Notes:
 1-) If autowrap, output is the same <ITEM NAME CASE SENSITIVE> (Eg: testValue = > "testValue")
 2-) If not autowrap, output is lowercase format (Eg: testValue = > testvalue)
@@ -76,15 +110,17 @@ Notes:
 
 <INJECT>	::= ?
 
-<CHARS>		::= ^<EMPTY>[<CHARS>](a-Z0-9)
+<CHARS>		::= ^<EMPTY>[<CHARS>](a-Z0-9_)
 
-<LITERAL>	::= (<NUMBER> | <STRING> | <HEXA>)^<CHARS>
+<LITERAL>	::= (<NUMBER> | <STRING> | <INJECT> | <HEXA>)^<CHARS>
 
-<HEXA>		::= (a-f)|(A-F)|(0-9)|-[<HEXA>]
+<HEXA>		::= (a-f)|(A-F)|<DIGIT>|-[<HEXA>]
 Notes: 
 1-) The position of the hyphen will not be validated	
 
-<NUMBER>	::= (0-9)^<CHARS>[<NUMBER>]
+<NUMBER>	::= <DIGIT>[<NUMBER>]
+
+<DIGIT>	::= (0-9)
 
 <STRING>	::= (<SINGLE QUOTED>[<INPUT CHARACTER EXCEPT SINGLE>]<SINGLE QUOTED>) | (<DOUBLE QUOTED>[<INPUT CHARACTER EXCEPT DOUBLE>]<DOUBLE QUOTED>) 
 
@@ -92,9 +128,9 @@ Notes:
 
 <DOUBLE QUOTED> ::= "<INPUT CHARACTER EXCEPT DOUBLE>"
 
-<INPUT CHARACTER EXCEPT SINGLE> ::= (^<SINGLE QUOTED>%s)[<INPUT CHARACTER EXCEPT SINGLE>]
+<INPUT CHARACTER EXCEPT SINGLE> ::= (^<SINGLE QUOTED><CHARS>)[<INPUT CHARACTER EXCEPT SINGLE>]
 
-<INPUT CHARACTER EXCEPT DOUBLE> ::= (^<DOUBLE QUOTED>%s)[<INPUT CHARACTER EXCEPT DOUBLE>] 
+<INPUT CHARACTER EXCEPT DOUBLE> ::= (^<DOUBLE QUOTED><CHARS>)[<INPUT CHARACTER EXCEPT DOUBLE>] 
 
 Notes:
 1-) Any character except ' unless is part of a double quoted ''  

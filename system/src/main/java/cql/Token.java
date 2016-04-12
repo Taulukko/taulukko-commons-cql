@@ -4,13 +4,14 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Token {
+
+
 	private TokenType type = null;
 	private String content = null;
 	private String posContent = null;
 	private List<Token> subTokens = new ArrayList<Token>();
 	private Token after = null;
 	private Token before = null;
-	
 
 	public Token(TokenType type) {
 		this.type = type;
@@ -55,9 +56,22 @@ public class Token {
 	public void setBefore(Token before) {
 		this.before = before;
 	}
-	
-	public String toString()
-	{
+
+	public String toString() {
 		return this.type.getName() + " [ " + this.content + " ]";
+	}
+
+	public Token clone() {
+
+		Token ret = new Token(getType());
+
+		ret.setContent(this.getContent());
+		ret.setPosContent(this.getPosContent());
+
+		for (Token token : subTokens) {
+			ret.subTokens.add(token.clone());
+		}
+
+		return ret;
 	}
 }

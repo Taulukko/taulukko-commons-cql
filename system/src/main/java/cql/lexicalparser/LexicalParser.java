@@ -22,8 +22,8 @@ public class LexicalParser {
 
 	private static final Set<String> RESERVED_WORDS = new HashSet<String>(
 			Arrays.asList("ADD", "ALL", "ALLOW", "ALTER", "AND", "ANY",
-					"APPLY", "ASC", "ASCII", "AUTHORIZE", "BATCH", "BEGIN",
-					"BIGINT", "BLOB", "BOOLEAN", "BY", "CLUSTERING",
+					"APPLY", "AS", "ASC", "ASCII", "AUTHORIZE", "BATCH",
+					"BEGIN", "BIGINT", "BLOB", "BOOLEAN", "BY", "CLUSTERING",
 					"COLUMNFAMILY", "COMPACT", "COUNT", "COUNTER",
 					"CONSISTENCY", "CREATE", "DECIMAL", "DELETE", "DESC",
 					"DOUBLE", "DROP", "EACH_QUORUM", "FILTERING", "FLOAT",
@@ -31,13 +31,12 @@ public class LexicalParser {
 					"INTO", "KEY", "KEYSPACE", "KEYSPACES", "LEVEL", "LIMIT",
 					"LIST", "LOCAL_ONE", "LOCAL_QUORUM", "MAP", "MODIFY",
 					"RECURSIVE", "SUPERUSER", "OF", "ON", "ONE", "ORDER",
-					"PASSWORD", "PERMISSION", "PERMISSIONS", "PRIMARY",
-					"QUORUM", "RENAME", "REVOKE", "SCHEMA", "SELECT", "SET",
-					"STORAGE", "SUPERUSER", "TABLE", "TEXT", "TIMESTAMP",
-					"TIMEUUID", "TO", "TOKEN", "THREE", "TRUNCATE", "TTL",
-					"TWO", "TYPE", "UNLOGGED", "UPDATE", "USE", "USER",
-					"USERS", "USING", "UUID", "VALUES", "VARCHAR", "VARINT",
-					"WITH", "WRITETIME"));
+					"PERMISSION", "PERMISSIONS", "PRIMARY", "QUORUM", "RENAME",
+					"REVOKE", "SCHEMA", "SELECT", "SET", "STORAGE",
+					"SUPERUSER", "TABLE", "TEXT", "TIMESTAMP", "TIMEUUID",
+					"TO", "TOKEN", "THREE", "TRUNCATE", "TTL", "TWO", "TYPE",
+					"UNLOGGED", "UPDATE", "USE", "USER", "USING", "UUID",
+					"VALUES", "VARCHAR", "VARINT", "WITH", "WRITETIME", "WHERE"));
 
 	// <SYMBOL> ::= = | + | - | / | * | ( | ) | { | } | , [ | ]
 	private static final Set<Character> SYMBOLS = new HashSet<Character>(
@@ -115,7 +114,7 @@ public class LexicalParser {
 
 	}
 
-	// <CHARS> ::= ^<EMPTY>[<CHARS>](a-Z0-9)
+	// <CHARS> ::= ^<EMPTY>[<CHARS>](a-Z0-9_)
 	public Token isChars(String text, boolean required)
 			throws LexicalParserException {
 		Token token = new Token(TokenType.CHARS);
@@ -132,7 +131,8 @@ public class LexicalParser {
 		for (int index = 0; index < text.length(); index++) {
 			Character character = text.charAt(index);
 			boolean valid = Character.isAlphabetic(text.codePointAt(index))
-					|| Character.isDigit(text.codePointAt(index));
+					|| Character.isDigit(text.codePointAt(index))
+					|| character == '_';
 
 			if (!valid) {
 				if (content.length() > 0) {
@@ -154,6 +154,14 @@ public class LexicalParser {
 		return token;
 	}
 
+	// <DOUBLE DOT> ::= :
+	public Token isDoubleDot(String text, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.DOUBLE_DOT, ":", text, required);
+
+	}
+
 	// <COMA> ::= ,
 	public Token isComma(String text, boolean required)
 			throws LexicalParserException {
@@ -162,12 +170,312 @@ public class LexicalParser {
 
 	}
 
-	// <COMMAND> ::= <RESERVED WORDS> [<SELECTOR BLOCK>] [<SPACES>] [<SYMBOL>]
-	// [<SPACES>] [<LITERAL>] [<SPACES>] [<COMMAND>]
-	public Token isCommand(String text, boolean required)
+	// <COMMAND> ::= <INSERT COMMAND> | <OTHER COMMAND>
+	public Token isCommand(final String text, final boolean required)
 			throws LexicalParserException {
 		Token token = new Token(TokenType.COMMAND);
-		String content = text;
+
+		Token leftToken = null;
+
+		Token insertCommand = isInsertCommand(text, false);
+		if (insertCommand == null) {
+			Token otherCommands = isOtherCommands(text, required);
+			if (otherCommands == null) {
+				return null;
+			}
+
+			updateNeighbors(leftToken, otherCommands);
+			leftToken = otherCommands;
+			token.getSubTokens().add(leftToken);
+
+		} else {
+
+			updateNeighbors(leftToken, insertCommand);
+			leftToken = insertCommand;
+			token.getSubTokens().add(leftToken);
+
+		}
+
+		String content = text.substring(0, text.length()
+				- leftToken.getPosContent().length());
+
+		token.setContent(content);
+
+		token.setPosContent(leftToken.getPosContent());
+
+		return token;
+	}
+
+	// <OTHER COMMAND> ::= ^<WHERE> <RESERVED WORDS> [<SPACES>] (<SELECTOR
+	// BLOCK> | ( [<SYMBOL>] [<SPACES>] [<LITERAL>] )[<SPACES>] )
+	// [[<SPACES>]<OTHER COMMAND>]
+	public Token isOtherCommands(String text, boolean required)
+			throws LexicalParserException {
+		Token token = new Token(TokenType.OTHER_COMMAND);
+
+		Token leftToken = null;
+
+		Token where = isWhere(text, false);
+		if (where != null) {
+			if (required) {
+				buildLexicalParserException(token, text);
+			}
+			return null;
+		}
+
+		Token insertCommand = isReservedWord(text, required);
+		if (insertCommand == null) {
+			return null;
+
+		}
+
+		updateNeighbors(leftToken, insertCommand);
+		leftToken = insertCommand;
+		token.getSubTokens().add(leftToken);
+
+		Token tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
+		}
+
+		// <OTHER COMMAND> ::= <RESERVED WORDS> [<SPACES>] (<SELECTOR BLOCK> | (
+		// [<SYMBOL>] [<SPACES>] [<LITERAL>] [<SPACES>] ) [<OTHER COMMAND>]
+
+		Token tokenSelectorBlock = isSelectorBlock(leftToken.getPosContent(),
+				false);
+		if (tokenSelectorBlock == null) {
+			Token tokenSymbol = isSymbol(leftToken.getPosContent(), false);
+			if (tokenSymbol != null) {
+				updateNeighbors(leftToken, tokenSymbol);
+				leftToken = tokenSymbol;
+				token.getSubTokens().add(leftToken);
+			}
+
+			tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+			if (tokenSpaces != null) {
+				updateNeighbors(leftToken, tokenSpaces);
+				leftToken = tokenSpaces;
+				token.getSubTokens().add(leftToken);
+			}
+
+			Token tokenLiteral = isLiteral(leftToken.getPosContent(), false);
+			if (tokenLiteral != null) {
+				updateNeighbors(leftToken, tokenLiteral);
+				leftToken = tokenLiteral;
+				token.getSubTokens().add(leftToken);
+			}
+
+			tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+			if (tokenSpaces != null) {
+				updateNeighbors(leftToken, tokenSpaces);
+				leftToken = tokenSpaces;
+				token.getSubTokens().add(leftToken);
+			}
+		} else {
+			updateNeighbors(leftToken, tokenSelectorBlock);
+			leftToken = tokenSelectorBlock;
+			token.getSubTokens().add(leftToken);
+		}
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			Token otherCommands = isOtherCommands(tokenSpaces.getPosContent(),
+					false);
+			if (otherCommands != null) {
+				updateNeighbors(leftToken, tokenSpaces);
+				leftToken = tokenSpaces;
+				token.getSubTokens().add(leftToken);
+
+				updateNeighbors(leftToken, otherCommands);
+				leftToken = otherCommands;
+				token.getSubTokens().add(leftToken);
+			}
+		}
+
+		String content = text.substring(0, text.length()
+				- leftToken.getPosContent().length());
+
+		token.setContent(content);
+		token.setPosContent(leftToken.getPosContent());
+
+		return token;
+	}
+
+	// <INSERT COMMAND> ::= <INSERT> <SPACES> [<INTO> <SPACES>] <SELECTOR ITEM>
+	// [<SPACES>] <START_PARAMETERS> [<SPACES>] <SELECTOR BLOCK> [<SPACES>]
+	// <END_PARAMETERS> [<SPACES>] <VALUES> [<SPACES>] <START_PARAMETERS>
+	// [<SPACES>] [<SELECTOR BLOCK>] [<SPACES>] <END_PARAMETERS>
+	public Token isInsertCommand(String text, boolean required)
+			throws LexicalParserException {
+		Token token = new Token(TokenType.INSERT_COMMAND);
+
+		Token leftToken = null;
+
+		Token tokenInsert = isInsert(text, required);
+		if (tokenInsert == null) {
+			return null;
+		}
+
+		updateNeighbors(leftToken, tokenInsert);
+		leftToken = tokenInsert;
+		token.getSubTokens().add(leftToken);
+
+		Token tokenSpaces = isSpaces(leftToken.getPosContent(), required);
+		if (tokenSpaces == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, tokenSpaces);
+		leftToken = tokenSpaces;
+		token.getSubTokens().add(leftToken);
+
+		Token tokenInto = isInto(leftToken.getPosContent(), false);
+		if (tokenInto != null) {
+			updateNeighbors(leftToken, tokenInto);
+			leftToken = tokenInto;
+			token.getSubTokens().add(tokenInto);
+
+			tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+			if (tokenSpaces == null) {
+				return null;
+			}
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
+		}
+
+		Token selectorBlock = isSelectorItem(leftToken.getPosContent(),
+				required);
+		if (selectorBlock == null) {
+			return null;
+		}
+
+		updateNeighbors(leftToken, selectorBlock);
+		leftToken = selectorBlock;
+		token.getSubTokens().add(leftToken);
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
+		}
+
+		Token startParams = isStartParameters(leftToken.getPosContent(),
+				required);
+		if (startParams == null) {
+			return null;
+		}
+
+		updateNeighbors(leftToken, startParams);
+		leftToken = startParams;
+		token.getSubTokens().add(leftToken);
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
+		}
+
+		selectorBlock = isSelectorBlock(leftToken.getPosContent(), required);
+		if (selectorBlock == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, selectorBlock);
+		leftToken = selectorBlock;
+		token.getSubTokens().add(leftToken);
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
+		}
+
+		Token endParams = isEndParameters(leftToken.getPosContent(), required);
+		if (endParams == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, endParams);
+		leftToken = endParams;
+		token.getSubTokens().add(leftToken);
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
+		}
+
+		Token tokenValues = isValues(leftToken.getPosContent(), required);
+		if (tokenValues == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, tokenValues);
+		leftToken = tokenValues;
+		token.getSubTokens().add(leftToken);
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
+		}
+
+		startParams = isStartParameters(leftToken.getPosContent(), required);
+		if (startParams == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, startParams);
+		leftToken = startParams;
+		token.getSubTokens().add(leftToken);
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
+		}
+
+		selectorBlock = isSelectorBlock(leftToken.getPosContent(), required);
+		if (selectorBlock == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, selectorBlock);
+		leftToken = selectorBlock;
+		token.getSubTokens().add(leftToken);
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
+		}
+
+		endParams = isEndParameters(leftToken.getPosContent(), required);
+		if (endParams == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, endParams);
+		leftToken = endParams;
+		token.getSubTokens().add(leftToken);
+
+		String content = text.substring(0, text.length()
+				- leftToken.getPosContent().length());
+		token.setContent(content);
+		token.setPosContent(leftToken.getPosContent());
+
+		return token;
+	}
+
+	// <COMMAND> ::= <RESERVED WORDS> [<SPACES>] [<START_PARAMETERS><SPACES>]¹
+	// [<SELECTOR BLOCK>] [<SPACES><END_PARAMETERS>]¹ [<SPACES>] [<SYMBOL>]
+	// [<SPACES>] [<LITERAL>] [<SPACES>] [<COMMAND>]
+	public Token isOldCommand(final String text, final boolean required)
+			throws LexicalParserException {
+		Token token = new Token(TokenType.COMMAND);
 
 		Token leftToken = null;
 
@@ -178,69 +486,67 @@ public class LexicalParser {
 
 		leftToken = tokenReservedWords;
 		token.getSubTokens().add(leftToken);
-		text = leftToken.getPosContent();
-
-		Token selectorBlock = isSelectorBlock(leftToken.getPosContent(), false);
-		if (selectorBlock != null) {
-
-			leftToken = selectorBlock;
-			token.getSubTokens().add(leftToken);
-			updateNeighbors(leftToken, selectorBlock);
-			text = leftToken.getPosContent();
-		}
 
 		Token tokenSpaces = isSpaces(leftToken.getPosContent(), false);
 		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
 			leftToken = tokenSpaces;
 			token.getSubTokens().add(leftToken);
+		}
+
+		Token selectorBlock = isSelectorBlock(leftToken.getPosContent(), false);
+		if (selectorBlock != null) {
 			updateNeighbors(leftToken, selectorBlock);
-			text = leftToken.getPosContent();
+			leftToken = selectorBlock;
+			token.getSubTokens().add(leftToken);
+		}
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
+			leftToken = tokenSpaces;
+			token.getSubTokens().add(leftToken);
 		}
 
 		Token tokenSymbol = isSymbol(leftToken.getPosContent(), false);
 		if (tokenSymbol != null) {
-
+			updateNeighbors(leftToken, tokenSymbol);
 			leftToken = tokenSymbol;
 			token.getSubTokens().add(leftToken);
-			updateNeighbors(leftToken, selectorBlock);
-			text = leftToken.getPosContent();
 		}
 
 		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
 		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
 			leftToken = tokenSpaces;
 			token.getSubTokens().add(leftToken);
-			updateNeighbors(leftToken, selectorBlock);
-			text = leftToken.getPosContent();
 		}
 
 		Token tokenLiteral = isLiteral(leftToken.getPosContent(), false);
 		if (tokenLiteral != null) {
+			updateNeighbors(leftToken, tokenLiteral);
 			leftToken = tokenLiteral;
 			token.getSubTokens().add(leftToken);
-			updateNeighbors(leftToken, selectorBlock);
-			text = leftToken.getPosContent();
 		}
 
 		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
 		if (tokenSpaces != null) {
+			updateNeighbors(leftToken, tokenSpaces);
 			leftToken = tokenSpaces;
 			token.getSubTokens().add(leftToken);
-			updateNeighbors(leftToken, selectorBlock);
-			text = leftToken.getPosContent();
 		}
 
-		Token tokenAnotherComand = isCommand(text, false);
+		Token tokenAnotherComand = isCommand(leftToken.getPosContent(), false);
 		if (tokenAnotherComand != null) {
+			updateNeighbors(leftToken, tokenAnotherComand);
 			leftToken = tokenAnotherComand;
 			token.getSubTokens().add(leftToken);
-			updateNeighbors(leftToken, selectorBlock);
-			text = leftToken.getPosContent();
 		}
 
-		content = content.substring(0, content.length() - text.length());
+		String content = text.substring(0, text.length()
+				- leftToken.getPosContent().length());
 		token.setContent(content);
-		token.setPosContent(text);
+		token.setPosContent(leftToken.getPosContent());
 
 		return token;
 	}
@@ -280,7 +586,7 @@ public class LexicalParser {
 
 	// <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<SYMBOL>[<SPACES>]<SELECTOR
 	// ITEM>
-	public Token isConditionItem(String text, boolean required)
+	public Token isConditionItem(final String text, final boolean required)
 			throws LexicalParserException {
 
 		Token token = new Token(TokenType.CONDITION_ITEM);
@@ -298,34 +604,32 @@ public class LexicalParser {
 
 		Token left = tokenSelectorItem;
 		token.getSubTokens().add(left);
-		text = left.getPosContent();
 
-		Token tokenSpaces = isSpaces(tokenSelectorItem.getPosContent(), false);
+		Token tokenSpaces = isSpaces(left.getPosContent(), false);
 		if (tokenSpaces != null) {
 			updateNeighbors(left, tokenSpaces);
 			left = tokenSpaces;
-			text = left.getPosContent();
 			token.getSubTokens().add(left);
 		}
 
 		Token tokenSymbol = isSymbol(left.getPosContent(), false);
 		if (tokenSymbol == null) {
 			if (required) {
-				buildLexicalParserException(token, text, "Expected SYMBOL");
+				buildLexicalParserException(token, left.getPosContent(),
+						"Expected SYMBOL");
 			}
 			return null;
 		}
 
 		updateNeighbors(left, tokenSymbol);
 		left = tokenSymbol;
-		text = left.getPosContent();
 		token.getSubTokens().add(left);
 
 		tokenSpaces = isSpaces(left.getPosContent(), false);
 		if (tokenSpaces != null) {
 			updateNeighbors(left, tokenSpaces);
 			left = tokenSpaces;
-			text = left.getPosContent();
+
 			token.getSubTokens().add(left);
 		}
 
@@ -336,7 +640,6 @@ public class LexicalParser {
 
 		updateNeighbors(left, tokenSelectorItem2);
 		left = tokenSelectorItem2;
-		text = left.getPosContent();
 		token.getSubTokens().add(left);
 
 		content = content.substring(0, content.length()
@@ -348,7 +651,7 @@ public class LexicalParser {
 
 	// <CONDITIONS> ::= <SPACES><CONDITION-ITEM>[<SPACES> <JOIN
 	// CONDITION><CONDITIONS>]
-	public Token isConditions(String text, boolean required)
+	public Token isConditions(final String text, final boolean required)
 			throws LexicalParserException {
 		Token left = null;
 		Token token = new Token(TokenType.CONDITIONS);
@@ -425,53 +728,67 @@ public class LexicalParser {
 
 	}
 
-	// <CQL> ::= [<SPACES>] <COMMAND> [ <SPACES> <CONDITION> ] [ <SPACES>]
+	// <CQL> ::= [<SPACES>] <COMMAND> [ [<SPACES>] <CONDITION> ] [ <SPACES>]
 	// [<COMMA> [ <SPACES>]]
 	public Token isCQL(String cql) throws LexicalParserException {
 
-		String left = cql;
-
 		Token tokenCQL = new Token(TokenType.CQL);
+		tokenCQL.setContent(cql);
+		Token left = null;
 
 		Token tokenSpace = isSpaces(cql, false);
 		if (tokenSpace != null) {
-			tokenCQL.setContent(cql);
 			tokenCQL.getSubTokens().add(tokenSpace);
-			left = tokenSpace.getPosContent();
+			left = tokenSpace;
 		}
 
-		Token tokenCommand = isCommand(left, true);
+		Token tokenCommand = isCommand(
+				(left == null) ? cql : left.getPosContent(), true);
 		if (tokenCommand == null) {
 			throw new LexicalParserException("Token command not found");
 		}
 
-		left = tokenCommand.getPosContent();
+		updateNeighbors(left, tokenCommand);
+		left = tokenCommand;
+		tokenCQL.getSubTokens().add(left);
 
+		tokenSpace = isSpaces(left.getPosContent(), false);
 		if (tokenSpace != null) {
-			updateNeighbors(tokenSpace, tokenCommand);
-		}
 
-		tokenCQL.getSubTokens().add(tokenCommand);
-
-		tokenSpace = isSpaces(left, false);
-		if (tokenSpace != null) {
-			tokenCQL.getSubTokens().add(tokenSpace);
-			left = tokenSpace.getPosContent();
-			updateNeighbors(tokenCommand, tokenSpace);
-
-			Token tokenCondition = isCondition(left, false);
-			if (tokenCondition != null) {
-				tokenCQL.getSubTokens().add(tokenCondition);
-				left = tokenSpace.getPosContent();
-				updateNeighbors(tokenCommand, tokenSpace);
-
-			}
+			updateNeighbors(left, tokenSpace);
+			left = tokenSpace;
+			tokenCQL.getSubTokens().add(left);
 
 		}
 
-		// TODO: verifica se tem espaços
-		// TODO: verifica se tem coma
-		// TODO: verifica se tem espaços
+		Token tokenCondition = isCondition(left.getPosContent(), false);
+		if (tokenCondition != null) {
+			updateNeighbors(left, tokenCondition);
+			left = tokenCondition;
+			tokenCQL.getSubTokens().add(left);
+		}
+
+		Token tokenComma = isComma(left.getPosContent(), false);
+
+		if (tokenComma != null) {
+
+			updateNeighbors(left, tokenComma);
+			left = tokenComma;
+			tokenCQL.getSubTokens().add(left);
+		}
+
+		tokenSpace = isSpaces(left.getPosContent(), false);
+		if (tokenSpace != null) {
+
+			updateNeighbors(left, tokenSpace);
+			left = tokenSpace;
+			tokenCQL.getSubTokens().add(left);
+		}
+
+		if (!left.getPosContent().isEmpty()) {
+			throw new LexicalParserException("CEU Lexical Error near ["
+					+ left.getPosContent() + "]");
+		}
 
 		return tokenCQL;
 	}
@@ -492,25 +809,24 @@ public class LexicalParser {
 
 	// <FUNCTION>::= <ITEM NAME>[<SPACES>]<START_PARAMETERS>[<SPACES>][<SELECTOR
 	// ITEM>][<SPACES>]<END_PARAMETERS>
-	public Token isFunction(String text, boolean required)
+	public Token isFunction(String content, boolean required)
 			throws LexicalParserException {
 		Token token = new Token(TokenType.FUNCTION);
-		String content = text;
 
-		if (text.length() < 3) {
+		if (content.length() < 3) {
 			if (required) {
-				buildLexicalParserException(token, text);
+				buildLexicalParserException(token, content);
 			}
 			return null;
 		}
 
 		Token left = null;
 
-		Token itemName = isItemName(text, required);
+		Token itemName = isItemName(content, required);
 
 		if (itemName == null) {
 			if (required) {
-				buildLexicalParserException(token, text);
+				buildLexicalParserException(token, content);
 			}
 			return null;
 		}
@@ -518,61 +834,56 @@ public class LexicalParser {
 		left = itemName;
 		token.getSubTokens().add(left);
 
-		text = itemName.getPosContent();
-		Token spaces = isSpaces(text, required);
+		Token spaces = isSpaces(left.getPosContent(), required);
 
 		if (spaces != null) {
 			updateNeighbors(left, spaces);
 			left = spaces;
 			token.getSubTokens().add(left);
-			text = spaces.getPosContent();
 		}
 
-		Token startParameters = isStartParameters(text, required);
+		Token startParameters = isStartParameters(left.getPosContent(),
+				required);
 
 		if (startParameters == null) {
 			if (required) {
-				buildLexicalParserException(token, text);
+				buildLexicalParserException(token, left.getPosContent());
 			}
 			return null;
 		}
 		updateNeighbors(left, startParameters);
 		left = startParameters;
 		token.getSubTokens().add(left);
-		text = left.getPosContent();
 
-		spaces = isSpaces(text, required);
+		spaces = isSpaces(left.getPosContent(), required);
 
 		if (spaces != null) {
 			updateNeighbors(left, spaces);
 			left = spaces;
 			token.getSubTokens().add(left);
-			text = left.getPosContent();
 		}
 
-		Token selectorItem = isSelectorItem(text, required);
+		Token selectorItem = isSelectorItem(left.getPosContent(), required);
 
 		if (selectorItem != null) {
 			updateNeighbors(left, selectorItem);
 			left = selectorItem;
 			token.getSubTokens().add(left);
-			text = left.getPosContent();
 		}
 
-		spaces = isSpaces(text, required);
+		spaces = isSpaces(left.getPosContent(), required);
 
 		if (spaces != null) {
 			updateNeighbors(left, spaces);
 			left = spaces;
 			token.getSubTokens().add(left);
-			text = left.getPosContent();
 		}
 
-		Token endParameters = isEndParameters(text, required);
+		Token endParameters = isEndParameters(left.getPosContent(), required);
 
 		if (endParameters == null) {
 			if (required) {
-				buildLexicalParserException(token, text);
+				buildLexicalParserException(token, left.getPosContent());
 			}
 			return null;
 		}
@@ -580,17 +891,15 @@ public class LexicalParser {
 		updateNeighbors(left, endParameters);
 		left = endParameters;
 		token.getSubTokens().add(left);
-		text = left.getPosContent();
 
-		String postContent = text.substring(1);
-
-		content = content.substring(0, content.length() - postContent.length());
+		content = content.substring(0, content.length()
+				- left.getPosContent().length());
 		token.setContent(content);
-		token.setPosContent(postContent);
+		token.setPosContent(left.getPosContent());
 		return token;
 	}
 
-	// <HEXA> ::= (a-f)|(A-F)|(0-9)|-[<HEXA>]
+	// <HEXA> ::= (a-f)|(A-F)|<DIGIT>|-[<HEXA>]
 	// Notes: The position of the hyphen will not be validated
 	public Token isHexa(String text, boolean required)
 			throws LexicalParserException {
@@ -612,10 +921,10 @@ public class LexicalParser {
 			char character = text.charAt(index);
 			boolean characterSmall = character >= 'a' && character <= 'f';
 			boolean characterBig = character >= 'A' && character <= 'F';
-			boolean number = character >= '0' && character <= '9';
+			boolean digit = character >= '0' && character <= '9';
 			boolean hifen = character == '-';
 
-			if (!characterSmall && !characterBig && !number && !hifen) {
+			if (!characterSmall && !characterBig && !digit && !hifen) {
 				if (content.length() > 0) {
 					break;
 				}
@@ -775,51 +1084,59 @@ public class LexicalParser {
 
 	}
 
-	// <ITEM NAME> ::= <ITEM NAME CASE SENSITIVE> | <ITEM NAME CASE INSENSITIVE>
-	// | <ASTERISK>
-	public Token isItemName(String posContent, boolean required)
+	// <ITEM NAME> ::= <ITEM NAME CASE SENSITIVE> | <ITEM NAME CASE
+	// INSENSITIVE> | <ASTERISK>
+	public Token isItemName(final String content, final boolean required)
 			throws LexicalParserException {
 
 		Token tokenItemName = new Token(TokenType.ITEMNAME);
 
-		Token tokenCaseSensitive = isItemNameCaseSensitive(posContent, false);
+		Token tokenCaseSensitive = isItemNameCaseSensitive(content, false);
 
 		if (tokenCaseSensitive != null) {
 
 			tokenItemName.getSubTokens().add(tokenCaseSensitive);
 			tokenItemName.setContent(tokenCaseSensitive.getContent());
-			tokenItemName.setPosContent(posContent.substring(tokenItemName
+			tokenItemName.setPosContent(content.substring(tokenItemName
 					.getContent().length()));
 			return tokenItemName;
 		}
 
-		Token tokenCaseInsensitive = isItemNameCaseInsensitive(posContent,
-				false);
+		Token tokenCaseInsensitive = isItemNameCaseInsensitive(content, false);
 		if (tokenCaseInsensitive != null) {
 
 			tokenItemName.getSubTokens().add(tokenCaseInsensitive);
 			tokenItemName.setContent(tokenCaseInsensitive.getContent());
-			tokenItemName.setPosContent(posContent.substring(tokenItemName
+			tokenItemName.setPosContent(content.substring(tokenItemName
 					.getContent().length()));
 			return tokenItemName;
 		}
 
-		Token asterisc = isAsterisk(posContent, required);
+		Token asterisc = isAsterisk(content, required);
 		if (asterisc == null) {
 			return null;
 		}
 
 		tokenItemName.getSubTokens().add(asterisc);
 		tokenItemName.setContent(asterisc.getContent());
-		tokenItemName.setPosContent(posContent.substring(asterisc.getContent()
+		tokenItemName.setPosContent(content.substring(asterisc.getContent()
 				.length()));
 		return tokenItemName;
 	}
 
-	// <ITEM NAME CASE INSENSITIVE> ::= <CHARS>
+	// <ITEM NAME CASE INSENSITIVE> ::= ^<NUMBER> <CHARS>
 	public Token isItemNameCaseInsensitive(String text, boolean required)
 			throws LexicalParserException {
 		Token token = new Token(TokenType.ITEM_NAME_CASE_INSENSITIVE);
+
+		Token numberToken = isNumber(text, false);
+		if (numberToken != null) {
+			if (required) {
+				buildLexicalParserException(token, text,
+						"Expected not number in [" + text + "]");
+			}
+			return null;
+		}
 
 		Token charToken = isChars(text, required);
 		if (charToken == null) {
@@ -906,7 +1223,7 @@ public class LexicalParser {
 	}
 
 	/**
-	 * <LITERAL> ::= (<NUMBER> | <STRING> | <HEXA>)^<CHARS>
+	 * <LITERAL> ::= (<NUMBER> | <STRING> | <INJECT> | <HEXA>)^<CHARS>
 	 */
 
 	public Token isLiteral(String text, boolean required)
@@ -955,6 +1272,23 @@ public class LexicalParser {
 			return token;
 		}
 
+		Token tokenInject = isInject(text, false);
+		if (tokenInject != null) {
+			token.getSubTokens().add(tokenInject);
+			token.setContent(tokenInject.getContent());
+			token.setPosContent(tokenInject.getPosContent());
+
+			if (isChars(token.getPosContent(), false) != null) {
+				if (required) {
+					buildLexicalParserException(token, text);
+				} else {
+					return null;
+				}
+			}
+
+			return token;
+		}
+
 		Token tokenHexa = isHexa(text, required);
 		if (tokenHexa == null) {
 			return null;
@@ -973,42 +1307,36 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <NUMBER> ::= (0-9)^<CHARS>[<NUMBER>]
+	// <NUMBER> ::= <DIGIT>[<NUMBER>]
 	public Token isNumber(String text, boolean required)
 			throws LexicalParserException {
 
 		Token token = new Token(TokenType.NUMBER);
 
-		StringBuffer content = new StringBuffer();
+		Token digit = isDigit(text, required);
 
-		for (int index = 0; index < text.length(); index++) {
-			char character = text.charAt(index);
-			boolean number = character >= '0' && character <= '9';
-
-			if (!number) {
-				if (content.length() > 0) {
-
-					// ^Chars
-					if (Character.isAlphabetic(text.codePointAt(index))) {
-						if (required) {
-							buildLexicalParserException(token, text);
-						}
-						return null;
-					}
-					break;
-				}
-				if (required) {
-					buildLexicalParserException(token, text);
-				}
-				return null;
-			}
-
-			content.append(character);
+		if (digit == null) {
+			return null;
 		}
 
-		String contentStr = content.toString();
-		token.setContent(contentStr);
-		token.setPosContent(text.substring(contentStr.length()));
+		Token left = digit;
+
+		token.getSubTokens().add(digit);
+
+		Token anotherNumber = isNumber(digit.getPosContent(), false);
+
+		if (anotherNumber != null) {
+			token.getSubTokens().add(anotherNumber);
+
+			updateNeighbors(left, anotherNumber);
+
+			left = anotherNumber;
+		}
+
+		token.setContent(text.substring(0, text.length()
+				- left.getPosContent().length()));
+
+		token.setPosContent(left.getPosContent());
 
 		return token;
 	}
@@ -1119,9 +1447,9 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <SELECTOR BLOCK> ::= [<SPACES>] <SELECTOR ITEM> [<SPACES>] [,<SELECTOR
-	// BLOCK>]
-	public Token isSelectorBlock(String text, boolean required)
+	// <SELECTOR BLOCK> ::= ^<WHERE> <SELECTOR ITEM> [[<SPACES>] <COMMA>
+	// [<SPACES>] <SELECTOR BLOCK>]
+	public Token isSelectorBlock(final String text, final boolean required)
 			throws LexicalParserException {
 
 		Token token = new Token(TokenType.SELECTOR_BLOCK);
@@ -1131,11 +1459,14 @@ public class LexicalParser {
 		Token spaces = isSpaces(text, false);
 		if (spaces != null) {
 			leftToken = spaces;
-			text = leftToken.getPosContent();
 			token.getSubTokens().add(leftToken);
 		}
 
-		Token selectorItem = isSelectorItem(text, required);
+		if (isWhere(content.trim(), false) != null) {
+			return null;
+		}
+
+		Token selectorItem = isSelectorItem(content, required);
 		if (selectorItem == null) {
 			if (required) {
 				buildLexicalParserException(token, content);
@@ -1146,44 +1477,61 @@ public class LexicalParser {
 		updateNeighbors(leftToken, selectorItem);
 
 		leftToken = selectorItem;
-		text = leftToken.getPosContent();
 		token.getSubTokens().add(leftToken);
 
-		spaces = isSpaces(text, false);
+		// <SELECTOR BLOCK> ::= ^<WHERE> <SELECTOR ITEM> [[<SPACES>] <COMMA>
+		// [<SPACES>] <SELECTOR BLOCK>]
+
+		Token tokenOptional = token.clone();
+		Token tokenLeftOptional = leftToken.clone();
+
+		spaces = isSpaces(tokenLeftOptional.getPosContent(), false);
 		if (spaces != null) {
-			updateNeighbors(leftToken, spaces);
-			leftToken = spaces;
-			text = leftToken.getPosContent();
-			token.getSubTokens().add(leftToken);
+			updateNeighbors(tokenLeftOptional, spaces);
+			tokenLeftOptional = spaces;
+			tokenOptional.getSubTokens().add(tokenLeftOptional);
 		}
 
-		Token comma = isComma(text, false);
+		Token comma = isComma(tokenLeftOptional.getPosContent(), false);
 		if (comma != null) {
 
-			updateNeighbors(leftToken, comma);
-			leftToken = comma;
-			text = leftToken.getPosContent();
-			Token anotherSelectorBlock = isSelectorBlock(text, false);
+			updateNeighbors(tokenLeftOptional, comma);
+			tokenLeftOptional = comma;
+			tokenOptional.getSubTokens().add(tokenLeftOptional);
+
+			spaces = isSpaces(tokenLeftOptional.getPosContent(), false);
+			if (spaces != null) {
+				updateNeighbors(tokenLeftOptional, spaces);
+				tokenLeftOptional = spaces;
+				tokenOptional.getSubTokens().add(tokenLeftOptional);
+			}
+
+			Token anotherSelectorBlock = isSelectorBlock(
+					tokenLeftOptional.getPosContent(), false);
 
 			if (anotherSelectorBlock != null) {
-				updateNeighbors(leftToken, anotherSelectorBlock);
-				leftToken = anotherSelectorBlock;
-				text = leftToken.getPosContent();
-				token.getSubTokens().add(leftToken);
+
+				updateNeighbors(tokenLeftOptional, anotherSelectorBlock);
+				tokenLeftOptional = anotherSelectorBlock;
+				tokenOptional.getSubTokens().add(tokenLeftOptional);
+
+				token = tokenOptional;
+				leftToken = tokenLeftOptional;
 			}
+
 		}
+		content = content.substring(0, content.length()
+				- leftToken.getPosContent().length());
 
-		content = content.substring(0, content.length() - text.length());
-
-		token.setPosContent(text);
+		token.setPosContent(leftToken.getPosContent());
 		token.setContent(content);
 		return token;
 
 	}
 
 	/**
-	 * <SELECTOR ITEM> ::= ^<RESERVED WORD> (<LITERAL> |<ITEM NAME> [<ACESSOR>
-	 * <ITEM NAME>] | <INJECT> | <FUNCTION>)
+	 * <SELECTOR ITEM> ::= ^<RESERVED WORD> (<FUNCTION> | <LITERAL> |<ITEM NAME>
+	 * [<ACESSOR> <FIELD NAME>] | <ARRAY> | <MAP>)[<SPACES><ALIAS>]
 	 */
 	public Token isSelectorItem(String text, boolean required)
 			throws LexicalParserException {
@@ -1203,82 +1551,118 @@ public class LexicalParser {
 			}
 		}
 
-		Token tokenLiteral = isLiteral(text, false);
-
-		if (tokenLiteral != null) {
-			left = tokenLiteral;
-			token.getSubTokens().add(left);
-			content = content.substring(0, content.length()
-					- left.getPosContent().length());
-			token.setContent(content);
-			token.setPosContent(left.getPosContent());
-
-			return token;
-		}
-
-		Token tokenItemName = isItemName(text, false);
-
-		if (tokenItemName != null) {
-			left = tokenItemName;
-			token.getSubTokens().add(left);
-
-			Token tokenAcessor = isAcessor(left.getPosContent(), false);
-
-			if (tokenAcessor != null) {
-
-				updateNeighbors(left, tokenAcessor);
-				left = tokenAcessor;
-
-				tokenItemName = isItemName(left.getPosContent(), false);
-
-				if (tokenItemName != null) {
-					token.getSubTokens().add(left);
-
-					updateNeighbors(left, tokenItemName);
-					left = tokenItemName;
-					token.getSubTokens().add(left);
-
-				}
-
-			}
-
-			content = content.substring(0, content.length()
-					- left.getPosContent().length());
-			token.setContent(content);
-			token.setPosContent(left.getPosContent());
-			return token;
-		}
-
-		Token tokenInject = isInject(text, false);
-		if (tokenInject != null) {
-			updateNeighbors(left, tokenInject);
-			left = tokenInject;
-			token.getSubTokens().add(left);
-			content = content.substring(0, content.length()
-					- left.getPosContent().length());
-			token.setContent(content);
-			token.setPosContent(left.getPosContent());
-
-			return token;
-		}
+		boolean found = false;
 
 		Token tokenFunction = isFunction(text, false);
 
 		if (tokenFunction != null) {
+			found = true;
 			updateNeighbors(left, tokenFunction);
 			left = tokenFunction;
 			token.getSubTokens().add(left);
-			content = content.substring(0, content.length()
-					- left.getPosContent().length());
-			token.setContent(content);
-			token.setPosContent(left.getPosContent());
-			return token;
 		}
 
-		if (required) {
-			buildLexicalParserException(token, text);
+		if (!found) {
+			Token tokenLiteral = isLiteral(text, false);
+
+			if (tokenLiteral != null) {
+				found = true;
+				left = tokenLiteral;
+				token.getSubTokens().add(left);
+			}
 		}
-		return null;
+
+		if (!found) {
+			Token tokenItemName = isItemName(text, false);
+
+			if (tokenItemName != null) {
+				found = true;
+				left = tokenItemName;
+				token.getSubTokens().add(left);
+
+				Token tokenoriginal = token;
+				Token leftoriginal = left;
+
+				token = token.clone();
+				left = left.clone();
+
+				Token tokenAcessor = isAcessor(left.getPosContent(), false);
+
+				if (tokenAcessor != null) {
+
+					updateNeighbors(left, tokenAcessor);
+					left = tokenAcessor;
+
+					Token tokenFieldName = isFieldName(left.getPosContent(),
+							false);
+
+					if (tokenFieldName == null) {
+						token = tokenoriginal;
+						left = leftoriginal;
+
+					} else {
+						token.getSubTokens().add(left);
+
+						updateNeighbors(left, tokenFieldName);
+						left = tokenFieldName;
+						token.getSubTokens().add(left);
+					}
+
+				}
+			}
+
+		}
+
+		if (!found) {
+			Token tokenarray = isArray(text, false);
+			if (tokenarray != null) {
+				found = true;
+
+				updateNeighbors(left, tokenarray);
+				left = tokenarray;
+				token.getSubTokens().add(left);
+
+			}
+		}
+
+		if (!found) {
+			Token tokenmap = isMap(text, required);
+			if (tokenmap != null) {
+				found = true;
+
+				updateNeighbors(left, tokenmap);
+				left = tokenmap;
+				token.getSubTokens().add(left);
+
+			}
+		}
+
+		if (!found) {
+			return null;
+		}
+
+		Token spaces = isSpaces(left.getPosContent(), false);
+		if (spaces != null) {
+			Token alias = isAlias(spaces.getPosContent(), false);
+			if (alias != null) {
+
+				updateNeighbors(left, spaces);
+				left = spaces;
+				token.getSubTokens().add(left);
+
+				updateNeighbors(left, alias);
+				left = alias;
+				token.getSubTokens().add(left);
+
+			}
+		}
+
+		content = content.substring(0, content.length()
+				- left.getPosContent().length());
+		token.setContent(content);
+		token.setPosContent(left.getPosContent());
+
+		return token;
 
 	}
 
@@ -1300,11 +1684,6 @@ public class LexicalParser {
 		Token token = new Token(tokenType);
 		String originalText = text;
 
-		if (!caseSensitive) {
-			text = text.toUpperCase();
-			singleText = singleText.toUpperCase();
-		}
-
 		if (text.length() < singleText.length()) {
 			if (required) {
 
@@ -1312,6 +1691,13 @@ public class LexicalParser {
 
 			}
 			return null;
+		}
+
+		String candidateTokenContent = text.substring(0, singleText.length());
+
+		if (!caseSensitive) {
+			text = text.toUpperCase();
+			singleText = singleText.toUpperCase();
 		}
 
 		if (scape != null) {
@@ -1334,7 +1720,7 @@ public class LexicalParser {
 			return null;
 		}
 
-		token.setContent(singleText);
+		token.setContent(candidateTokenContent);
 		token.setPosContent(originalText.substring(singleText.length()));
 		return token;
 	}
@@ -1467,11 +1853,29 @@ public class LexicalParser {
 		return token;
 	}
 
+	// <INSERT> ::= u(INSERT)
+	public Token isInsert(String text, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.INSERT, "INSERT", text, false, null,
+				required);
+
+	}
+
 	// <WHERE> ::= u(WHERE)
 	public Token isWhere(String text, boolean required)
 			throws LexicalParserException {
 
 		return isSingleText(TokenType.WHERE, "WHERE", text, false, null,
+				required);
+
+	}
+
+	// <VALUES> ::= u(VALUES)
+	public Token isValues(String text, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.VALUES, "VALUES", text, false, null,
 				required);
 
 	}
@@ -1485,4 +1889,414 @@ public class LexicalParser {
 		}
 	}
 
+	// <INTO> ::= u(INTO)
+	public Token isInto(String text, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.INTO, "INTO", text, false, null, required);
+
+	}
+
+	// <START ARRAY>::=[
+	public Token isStartArray(String cql, boolean required)
+			throws LexicalParserException {
+		return isSingleText(TokenType.START_ARRAY, "[", cql, required);
+	}
+
+	// <END ARRAY>::=]
+	public Token isEndArray(String cql, boolean required)
+			throws LexicalParserException {
+		return isSingleText(TokenType.END_ARRAY, "]", cql, required);
+	}
+
+	// <START MAP>::={
+	public Token isStartMap(String cql, boolean required)
+			throws LexicalParserException {
+		return isSingleText(TokenType.START_MAP, "{", cql, required);
+	}
+
+	public Token isEndMap(String cql, boolean required)
+			throws LexicalParserException {
+		return isSingleText(TokenType.END_MAP, "}", cql, required);
+	}
+
+	// <ARRAY> ::= <START ARRAY>[<SPACES>][<SELECTOR BLOCK>][<SPACES>]<END
+	// ARRAY>
+	public Token isArray(String text, boolean required)
+			throws LexicalParserException {
+
+		Token token = new Token(TokenType.ARRAY);
+		Token left = null;
+		String content = text;
+
+		// START ARRAY
+		Token startArray = isStartArray(text, required);
+
+		if (startArray == null) {
+			return null;
+		}
+
+		left = startArray;
+		token.getSubTokens().add(startArray);
+
+		Token spaces = isSpaces(left.getPosContent(), false);
+		if (spaces != null) {
+			updateNeighbors(left, spaces);
+			left = spaces;
+			token.getSubTokens().add(left);
+		}
+
+		Token selectorBlock = isSelectorBlock(left.getPosContent(), false);
+		if (selectorBlock != null) {
+			updateNeighbors(left, selectorBlock);
+			left = selectorBlock;
+			token.getSubTokens().add(left);
+		}
+
+		spaces = isSpaces(left.getPosContent(), false);
+		if (spaces != null) {
+			updateNeighbors(left, spaces);
+			left = spaces;
+			token.getSubTokens().add(left);
+		}
+
+		// END ARRAY
+		Token endArray = isEndArray(left.getPosContent(), required);
+
+		if (endArray == null) {
+			return null;
+		}
+
+		updateNeighbors(left, endArray);
+		left = endArray;
+		token.getSubTokens().add(endArray);
+		content = content.substring(0, content.length()
+				- left.getPosContent().length());
+		token.setContent(content);
+		token.setPosContent(left.getPosContent());
+		return token;
+
+	}
+
+	// <MAP> ::= <START MAP>[<SPACES>][<PROPERTIES>][<SPACES>]<END MAP>
+	public Token isMap(String text, boolean required)
+			throws LexicalParserException {
+
+		Token token = new Token(TokenType.MAP);
+		Token left = null;
+		String content = text;
+
+		// START MAP
+		Token startMap = isStartMap(text, required);
+
+		if (startMap == null) {
+			return null;
+		}
+
+		left = startMap;
+		token.getSubTokens().add(startMap);
+
+		Token spaces = isSpaces(left.getPosContent(), false);
+		if (spaces != null) {
+			updateNeighbors(left, spaces);
+			left = spaces;
+			token.getSubTokens().add(left);
+		}
+
+		Token properties = isProperties(left.getPosContent(), false);
+		if (properties != null) {
+			updateNeighbors(left, properties);
+			left = properties;
+			token.getSubTokens().add(left);
+		}
+
+		spaces = isSpaces(left.getPosContent(), false);
+		if (spaces != null) {
+			updateNeighbors(left, spaces);
+			left = spaces;
+			token.getSubTokens().add(left);
+		}
+
+		// END MAP
+		Token endMap = isEndMap(left.getPosContent(), required);
+
+		if (endMap == null) {
+			return null;
+		}
+
+		updateNeighbors(left, endMap);
+		left = endMap;
+		token.getSubTokens().add(endMap);
+		content = content.substring(0, content.length()
+				- left.getPosContent().length());
+		token.setContent(content);
+		token.setPosContent(left.getPosContent());
+		return token;
+
+	}
+
+	// <PROPERTIES> ::= <PROPERTY> [[<SPACES>]<COMMA>[<SPACES>] <PROPERTIES>]
+	public Token isProperties(String text, boolean required)
+			throws LexicalParserException {
+
+		Token token = new Token(TokenType.PROPERTIES);
+		Token left = null;
+		String content = text;
+
+		// START ARRAY
+		Token property = isProperty(text, required);
+
+		if (property == null) {
+			return null;
+		}
+
+		left = property;
+		token.getSubTokens().add(property);
+
+		Token originalToken = token.clone();
+		Token originalLeft = left.clone();
+
+		Token spaces = isSpaces(left.getPosContent(), false);
+		if (spaces != null) {
+			updateNeighbors(left, spaces);
+			left = spaces;
+			token.getSubTokens().add(left);
+		}
+
+		Token commaToken = isComma(left.getPosContent(), false);
+		if (commaToken != null) {
+
+			updateNeighbors(left, commaToken);
+			left = commaToken;
+			token.getSubTokens().add(left);
+
+			spaces = isSpaces(left.getPosContent(), false);
+			if (spaces != null) {
+				updateNeighbors(left, spaces);
+				left = spaces;
+				token.getSubTokens().add(left);
+			}
+
+			Token otherProperties = isProperties(left.getPosContent(), false);
+			if (otherProperties != null) {
+
+				updateNeighbors(left, otherProperties);
+				left = otherProperties;
+				token.getSubTokens().add(left);
+
+				originalToken = token;
+				originalLeft = left;
+			}
+		}
+
+		content = content.substring(0, content.length()
+				- originalLeft.getPosContent().length());
+		originalToken.setContent(content);
+		originalToken.setPosContent(originalLeft.getPosContent());
+		return originalToken;
+	}
+
+	// <PROPERTY> ::= <KEY>[<SPACES>]<DOUBLE DOT>[<SPACES>]<LITERAL>
+	public Token isProperty(String text, boolean required)
+			throws LexicalParserException {
+		Token token = new Token(TokenType.PROPERTY);
+		Token left = null;
+
+		Token key = isKey(text, required);
+
+		if (key == null) {
+			return null;
+		}
+		updateNeighbors(null, key);
+		left = key;
+		token.getSubTokens().add(left);
+
+		Token spaces = isSpaces(left.getPosContent(), false);
+		if (spaces != null) {
+			updateNeighbors(left, spaces);
+			left = spaces;
+			token.getSubTokens().add(left);
+		}
+
+		Token doubleDot = isDoubleDot(left.getPosContent(), required);
+		if (doubleDot == null) {
+			return null;
+		}
+
+		updateNeighbors(left, doubleDot);
+		left = doubleDot;
+		token.getSubTokens().add(left);
+
+		spaces = isSpaces(left.getPosContent(), false);
+		if (spaces != null) {
+			updateNeighbors(left, spaces);
+			left = spaces;
+			token.getSubTokens().add(left);
+		}
+
+		Token literal = isLiteral(left.getPosContent(), required);
+		if (literal == null) {
+			return null;
+		}
+
+		updateNeighbors(left, literal);
+		left = literal;
+		token.getSubTokens().add(left);
+
+		String content = text.substring(0, text.length()
+				- left.getPosContent().length());
+		token.setContent(content);
+		token.setPosContent(left.getPosContent());
+
+		return token;
+	}
+
+	// <KEY> ::= <CHARS>|<LITERAL>
+	public Token isKey(String text, boolean required)
+			throws LexicalParserException {
+
+		Token token = new Token(TokenType.KEY);
+		Token left = null;
+
+		Token chars = isChars(text, false);
+
+		if (chars == null) {
+			Token literal = isLiteral(text, required);
+			if (literal == null) {
+				return null;
+			}
+			left = literal;
+		} else {
+			left = chars;
+		}
+
+		token.getSubTokens().add(left);
+		String content = text.substring(0, text.length()
+				- left.getPosContent().length());
+		token.setContent(content);
+		token.setPosContent(left.getPosContent());
+
+		return token;
+	}
+
+	// <AS> :: = AS
+	public Token isAs(String text, boolean required)
+			throws LexicalParserException {
+		return isSingleText(TokenType.AS, "AS", text, false, null, required);
+	}
+
+	// <ALIAS> ::= [<AS> <SPACES>] <FIELD NAME>
+	public Token isAlias(String text, boolean required)
+			throws LexicalParserException {
+
+		Token token = new Token(TokenType.ALIAS);
+		Token left = null;
+
+		Token as = isAs(text, false);
+
+		Token tokenOriginal = token;
+		token = token.clone();
+
+		boolean backToOrigin = true;
+
+		if (as != null) {
+			updateNeighbors(left, as);
+			left = as;
+			token.getSubTokens().add(left);
+
+			Token spaces = isSpaces(left.getPosContent(), false);
+			if (spaces != null) {
+				updateNeighbors(left, spaces);
+				left = spaces;
+				token.getSubTokens().add(left);
+				backToOrigin = false;
+			}
+		}
+
+		if (backToOrigin) {
+			token = tokenOriginal;
+		}
+
+		String content = (left == null) ? text : left.getPosContent();
+		Token fieldNameToken = isFieldName(content, required);
+		if (fieldNameToken == null) {
+			return null;
+		}
+		updateNeighbors(left, fieldNameToken);
+		left = fieldNameToken;
+		token.getSubTokens().add(left);
+
+		token.setContent(text.substring(0, text.length()
+				- left.getPosContent().length()));
+		token.setPosContent(left.getPosContent());
+
+		return token;
+	}
+
+	// <FIELD NAME> ::= ^<RESERVED WORD> (<ITEM NAME CASE SENSITIVE> | <ITEM
+	// NAME CASE INSENSITIVE>)
+	public Token isFieldName(String text, boolean required)
+			throws LexicalParserException {
+		Token token = new Token(TokenType.FIELDNAME);
+
+		Token reservedWord = isReservedWord(text, false);
+
+		if (reservedWord != null) {
+
+			if (required) {
+				buildLexicalParserException(token, text);
+			}
+
+			return null;
+		}
+
+		Token itemNameCaseSensitive = isItemNameCaseSensitive(text, false);
+		if (itemNameCaseSensitive != null) {
+
+			token.getSubTokens().add(itemNameCaseSensitive);
+			token.setPosContent(itemNameCaseSensitive.getPosContent());
+			token.setContent(itemNameCaseSensitive.getContent());
+			return token;
+		}
+
+		Token itemNameCaseInsensitive = isItemNameCaseInsensitive(text,
+				required);
+		if (itemNameCaseInsensitive != null) {
+
+			token.getSubTokens().add(itemNameCaseInsensitive);
+			token.setPosContent(itemNameCaseInsensitive.getPosContent());
+			token.setContent(itemNameCaseInsensitive.getContent());
+			return token;
+		}
+
+		return null;
+	}
+
+	public Token isDigit(String text, boolean required)
+			throws LexicalParserException {
+		Token token = new Token(TokenType.DIGIT);
+
+		if (text.length() == 0) {
+			if (required) {
+				buildLexicalParserException(token, text);
+			}
+			return null;
+		}
+
+		char character = text.charAt(0);
+
+		boolean number = character >= '0' && character <= '9';
+
+		if (!number) {
+			if (required) {
+				buildLexicalParserException(token, text);
+			}
+			return null;
+		}
+
+		token.setContent(String.valueOf(character));
+		token.setPosContent(text.substring(1));
+
+		return token;
+	}
 }

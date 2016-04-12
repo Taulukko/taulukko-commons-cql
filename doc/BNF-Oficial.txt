@@ -1,0 +1,348 @@
+<start> ::= TERMINAL <non-terminal1> <non-terminal1>
+
+<identifier> ::= any quoted or unquoted identifier, excluding reserved keywords
+ <tablename> ::= (<identifier> '.')? <identifier>
+
+    <string> ::= a string constant
+   <integer> ::= an integer constant
+     <float> ::= a float constant
+    <number> ::= <integer> | <float>
+      <uuid> ::= a uuid constant
+   <boolean> ::= a boolean constant
+       <hex> ::= a blob constant
+
+  <constant> ::= <string>
+               | <number>
+               | <uuid>
+               | <boolean>
+               | <hex>
+  <variable> ::= '?'
+               | ':' <identifier>
+      <term> ::= <constant>
+               | <collection-literal>
+               | <variable>
+               | <function> '(' (<term> (',' <term>)*)? ')'
+
+  <collection-literal> ::= <map-literal>
+                         | <set-literal>
+                         | <list-literal>
+         <map-literal> ::= '{' ( <term> ':' <term> ( ',' <term> ':' <term> )* )? '}'
+         <set-literal> ::= '{' ( <term> ( ',' <term> )* )? '}'
+        <list-literal> ::= '[' ( <term> ( ',' <term> )* )? ']'
+
+    <function> ::= <ident>
+
+  <properties> ::= <property> (AND <property>)*
+    <property> ::= <identifier> '=' ( <identifier> | <constant> | <map-literal> )
+	
+
+
+<create-keyspace-stmt> ::= CREATE KEYSPACE (IF NOT EXISTS)? <identifier> WITH <properties>
+
+
+<use-stmt> ::= USE <identifier>
+
+
+<create-keyspace-stmt> ::= ALTER KEYSPACE <identifier> WITH <properties>
+
+
+<drop-keyspace-stmt> ::= DROP KEYSPACE ( IF EXISTS )? <identifier>
+
+<create-table-stmt> ::= CREATE ( TABLE | COLUMNFAMILY ) ( IF NOT EXISTS )? <tablename>
+                          '(' <column-definition> ( ',' <column-definition> )* ')'
+                          ( WITH <option> ( AND <option>)* )?
+
+<column-definition> ::= <identifier> <type> ( STATIC )? ( PRIMARY KEY )?
+                      | PRIMARY KEY '(' <partition-key> ( ',' <identifier> )* ')'
+
+<partition-key> ::= <identifier>
+                  | '(' <identifier> (',' <identifier> )* ')'
+
+<option> ::= <property>
+           | COMPACT STORAGE
+           | CLUSTERING ORDER
+
+<alter-table-stmt> ::= ALTER (TABLE | COLUMNFAMILY) <tablename> <instruction>
+
+<instruction> ::= ALTER <identifier> TYPE <type>
+                | ADD   <identifier> <type>
+                | DROP  <identifier>
+                | WITH  <option> ( AND <option> )*
+
+<drop-table-stmt> ::= DROP TABLE ( IF EXISTS )? <tablename>
+
+<truncate-stmt> ::= TRUNCATE ( TABLE | COLUMNFAMILY )? <tablename>
+
+<create-index-stmt> ::= CREATE ( CUSTOM )? INDEX ( IF NOT EXISTS )? ( <indexname> )?
+                            ON <tablename> '(' <index-identifier> ')'
+                            ( USING <string> ( WITH OPTIONS = <map-literal> )? )?
+
+<index-identifier> ::= <identifier>
+                     | keys( <identifier> )
+
+<drop-index-stmt> ::= DROP INDEX ( IF EXISTS )? ( <keyspace> '.' )? <identifier>
+
+<create-type-stmt> ::= CREATE TYPE ( IF NOT EXISTS )? <typename>
+                         '(' <field-definition> ( ',' <field-definition> )* ')'
+
+<typename> ::= ( <keyspace-name> '.' )? <identifier>
+
+<field-definition> ::= <identifier> <type>
+
+
+<alter-type-stmt> ::= ALTER TYPE <typename> <instruction>
+
+<instruction> ::= ALTER <field-name> TYPE <type>
+                | ADD <field-name> <type>
+                | RENAME <field-name> TO <field-name> ( AND <field-name> TO <field-name> )*
+
+<drop-type-stmt> ::= DROP TYPE ( IF EXISTS )? <typename>
+
+<create-trigger-stmt> ::= CREATE TRIGGER ( IF NOT EXISTS )? ( <triggername> )?
+                            ON <tablename> 
+                            USING <string>
+
+
+<drop-trigger-stmt> ::= DROP TRIGGER ( IF EXISTS )? ( <triggername> )?
+                            ON <tablename>
+
+<create-function-stmt> ::= CREATE ( OR REPLACE )? 
+                            FUNCTION ( IF NOT EXISTS )?
+                            ( <keyspace> '.' )? <function-name>
+                            '(' <arg-name> <arg-type> ( ',' <arg-name> <arg-type> )* ')'
+                            ( CALLED | RETURNS NULL ) ON NULL INPUT
+                            RETURNS <type>
+                            LANGUAGE <language>
+                            AS <body>
+
+<drop-function-stmt> ::= DROP FUNCTION ( IF EXISTS )?
+                         ( <keyspace> '.' )? <function-name>
+                         ( '(' <arg-type> ( ',' <arg-type> )* ')' )?
+
+<create-aggregate-stmt> ::= CREATE ( OR REPLACE )? 
+                            AGGREGATE ( IF NOT EXISTS )?
+                            ( <keyspace> '.' )? <aggregate-name>
+                            '(' <arg-type> ( ',' <arg-type> )* ')'
+                            SFUNC <state-functionname>
+                            STYPE <state-type>
+                            ( FINALFUNC <final-functionname> )?
+                            ( INITCOND <init-cond> )?
+
+<drop-aggregate-stmt> ::= DROP AGGREGATE ( IF EXISTS )?
+                         ( <keyspace> '.' )? <aggregate-name>
+                         ( '(' <arg-type> ( ',' <arg-type> )* ')' )?
+
+<insertStatement> ::= INSERT INTO <tablename>
+                      ( ( <name-list> VALUES <value-list> )
+                      | ( JSON <string> ))
+                      ( IF NOT EXISTS )?
+                      ( USING <option> ( AND <option> )* )?
+
+<names-list> ::= '(' <identifier> ( ',' <identifier> )* ')'
+
+<value-list> ::= '(' <term-or-literal> ( ',' <term-or-literal> )* ')'
+
+<term-or-literal> ::= <term>
+                    | <collection-literal>
+
+<option> ::= TIMESTAMP <integer>
+           | TTL <integer>
+
+<update-stmt> ::= UPDATE <tablename>
+                  ( USING <option> ( AND <option> )* )?
+                  SET <assignment> ( ',' <assignment> )*
+                  WHERE <where-clause>
+                  ( IF <condition> ( AND condition )* )?
+
+<assignment> ::= <identifier> '=' <term>
+               | <identifier> '=' <identifier> ('+' | '-') (<int-term> | <set-literal> | <list-literal>)
+               | <identifier> '=' <identifier> '+' <map-literal>
+               | <identifier> '[' <term> ']' '=' <term>
+
+<condition> ::= <identifier> <op> <term>
+              | <identifier> IN (<variable> | '(' ( <term> ( ',' <term> )* )? ')')
+              | <identifier> '[' <term> ']' <op> <term>
+              | <identifier> '[' <term> ']' IN <term>
+
+<op> ::= '<' | '<=' | '=' | '!=' | '>=' | '>'
+
+<where-clause> ::= <relation> ( AND <relation> )*
+
+<relation> ::= <identifier> '=' <term>
+             | <identifier> IN '(' ( <term> ( ',' <term> )* )? ')'
+             | <identifier> IN <variable>
+
+<option> ::= TIMESTAMP <integer>
+           | TTL <integer>
+
+<delete-stmt> ::= DELETE ( <selection> ( ',' <selection> )* )?
+                  FROM <tablename>
+                  ( USING TIMESTAMP <integer>)?
+                  WHERE <where-clause>
+                  ( IF ( EXISTS | ( <condition> ( AND <condition> )*) ) )?
+
+<selection> ::= <identifier> ( '[' <term> ']' )?
+
+<where-clause> ::= <relation> ( AND <relation> )*
+
+<relation> ::= <identifier> '=' <term>
+             | <identifier> IN '(' ( <term> ( ',' <term> )* )? ')'
+             | <identifier> IN <variable>
+
+<condition> ::= <identifier> <op> <term>
+              | <identifier> IN (<variable> | '(' ( <term> ( ',' <term> )* )? ')')
+              | <identifier> '[' <term> ']' <op> <term>
+              | <identifier> '[' <term> ']' IN <term>
+
+<op> ::= '<' | '<=' | '=' | '!=' | '>=' | '>'
+
+
+<batch-stmt> ::= BEGIN ( UNLOGGED | COUNTER ) BATCH
+                 ( USING <option> ( AND <option> )* )?
+                    <modification-stmt> ( ';' <modification-stmt> )*
+                 APPLY BATCH
+
+<modification-stmt> ::= <insert-stmt>
+                      | <update-stmt>
+                      | <delete-stmt>
+
+<option> ::= TIMESTAMP <integer>
+
+
+<select-stmt> ::= SELECT ( JSON )? <select-clause>
+                  FROM <tablename>
+                  ( WHERE <where-clause> )?
+                  ( ORDER BY <order-by> )?
+                  ( LIMIT <integer> )?
+                  ( ALLOW FILTERING )?
+
+<select-clause> ::= DISTINCT? <selection-list>
+                  | COUNT '(' ( '*' | '1' ) ')' (AS <identifier>)?
+
+<selection-list> ::= <selector> (AS <identifier>)? ( ',' <selector> (AS <identifier>)? )*
+                   | '*'
+
+<selector> ::= <identifier>
+             | WRITETIME '(' <identifier> ')'
+             | TTL '(' <identifier> ')'
+             | <function> '(' (<selector> (',' <selector>)*)? ')'
+
+<where-clause> ::= <relation> ( AND <relation> )*
+
+<relation> ::= <identifier> <op> <term>
+             | '(' <identifier> (',' <identifier>)* ')' <op> <term-tuple>
+             | <identifier> IN '(' ( <term> ( ',' <term>)* )? ')'
+             | '(' <identifier> (',' <identifier>)* ')' IN '(' ( <term-tuple> ( ',' <term-tuple>)* )? ')'
+             | TOKEN '(' <identifier> ( ',' <identifer>)* ')' <op> <term>
+
+<op> ::= '=' | '<' | '>' | '<=' | '>=' | CONTAINS | CONTAINS KEY
+<order-by> ::= <ordering> ( ',' <odering> )*
+<ordering> ::= <identifer> ( ASC | DESC )?
+<term-tuple> ::= '(' <term> (',' <term>)* ')'
+
+
+<create-role-stmt> ::= CREATE ROLE ( IF NOT EXISTS )? <identifier> ( WITH <option> ( AND <option> )* )?
+
+<option> ::= PASSWORD = <string>
+           | LOGIN = <boolean>
+           | SUPERUSER = <boolean>
+           | OPTIONS = <map_literal>
+
+<alter-role-stmt> ::= ALTER ROLE <identifier> ( WITH <option> ( AND <option> )* )?
+
+<option> ::= PASSWORD = <string>
+           | LOGIN = <boolean>
+           | SUPERUSER = <boolean>
+           | OPTIONS = <map_literal>
+
+<drop-role-stmt> ::= DROP ROLE ( IF EXISTS )? <identifier>
+
+<grant-role-stmt> ::= GRANT <identifier> TO <identifier>
+
+<revoke-role-stmt> ::= REVOKE <identifier> FROM <identifier>
+
+<list-roles-stmt> ::= LIST ROLES ( OF <identifier> )? ( NORECURSIVE )?
+
+<create-user-statement> ::= CREATE USER ( IF NOT EXISTS )? <identifier> ( WITH PASSWORD <string> )? (<option>)?
+
+<option> ::= SUPERUSER
+           | NOSUPERUSER
+
+<alter-user-statement> ::= ALTER USER <identifier> ( WITH PASSWORD <string> )? ( <option> )?
+
+<option> ::= SUPERUSER
+           | NOSUPERUSER
+
+<drop-user-stmt> ::= DROP USER ( IF EXISTS )? <identifier>
+
+<list-users-stmt> ::= LIST USERS;
+
+<grant-permission-stmt> ::= GRANT ( ALL ( PERMISSIONS )? | <permission> ( PERMISSION )? ) ON <resource> TO <identifier>
+
+<permission> ::= CREATE | ALTER | DROP | SELECT | MODIFY | AUTHORIZE | DESRIBE | EXECUTE
+
+<resource> ::= ALL KEYSPACES
+             | KEYSPACE <identifier>
+             | ( TABLE )? <tablename>
+             | ALL ROLES
+             | ROLE <identifier>
+             | ALL FUNCTIONS ( IN KEYSPACE <identifier> )?
+             | FUNCTION <functionname>
+
+<revoke-permission-stmt> ::= REVOKE ( ALL ( PERMISSIONS )? | <permission> ( PERMISSION )? ) ON <resource> FROM <identifier>
+
+<permission> ::= CREATE | ALTER | DROP | SELECT | MODIFY | AUTHORIZE | DESRIBE | EXECUTE
+
+<resource> ::= ALL KEYSPACES
+             | KEYSPACE <identifier>
+             | ( TABLE )? <tablename>
+             | ALL ROLES
+             | ROLE <identifier>
+             | ALL FUNCTIONS ( IN KEYSPACE <identifier> )?
+             | FUNCTION <functionname>
+
+
+<list-permissions-stmt> ::= LIST ( ALL ( PERMISSIONS )? | <permission> ) 
+                                 ( ON <resource> )? 
+                                 ( OF <identifier> ( NORECURSIVE )? )?
+
+<resource> ::= ALL KEYSPACES
+             | KEYSPACE <identifier>
+             | ( TABLE )? <tablename>
+             | ALL ROLES
+             | ROLE <identifier>
+             | ALL FUNCTIONS ( IN KEYSPACE <identifier> )?
+             | FUNCTION <functionname>
+
+<type> ::= <native-type>
+         | <collection-type>
+         | <tuple-type>
+         | <string>       // Used for custom types. The fully-qualified name of a JAVA class
+
+<native-type> ::= ascii
+                | bigint
+                | blob
+                | boolean
+                | counter
+                | date
+                | decimal
+                | double
+                | float
+                | inet
+                | int
+                | smallint
+                | text
+                | time
+                | timestamp
+                | timeuuid
+                | tinyint
+                | uuid
+                | varchar
+                | varint
+
+<collection-type> ::= list '<' <native-type> '>'
+                    | set  '<' <native-type> '>'
+                    | map  '<' <native-type> ',' <native-type> '>'
+<tuple-type> ::= tuple '<' <type> (',' <type>)* '>'
+
+			 

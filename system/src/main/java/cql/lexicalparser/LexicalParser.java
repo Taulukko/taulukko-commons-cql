@@ -170,6 +170,8 @@ public class LexicalParser {
 
 	}
 
+	// <COMMAND> ::= <CREATE TABLE COMMAND> | ((<INSERT COMMAND> |<OTHER
+	// COMMAND>) [ <SPACES> <CONDITION> ])
 	// <COMMAND> ::= <INSERT COMMAND> | <OTHER COMMAND>
 	public Token isCommand(final String text, final boolean required)
 			throws LexicalParserException {
@@ -177,22 +179,51 @@ public class LexicalParser {
 
 		Token leftToken = null;
 
-		Token insertCommand = isInsertCommand(text, false);
-		if (insertCommand == null) {
+		Token createTableCommand = isCreateTableCommand(text, false);
+
+		if (createTableCommand != null) {
+			leftToken = createTableCommand;
+			token.getSubTokens().add(leftToken);
+		}
+
+		boolean createTable = leftToken != null;
+		if (!createTable) {
+			Token insertCommand = isInsertCommand(text, false);
+			if (insertCommand != null) {
+
+				updateNeighbors(leftToken, insertCommand);
+				leftToken = insertCommand;
+				token.getSubTokens().add(leftToken);
+			}
+
+		}
+
+		if (leftToken == null) {
+
 			Token otherCommands = isOtherCommands(text, required);
 			if (otherCommands == null) {
 				return null;
 			}
-
 			updateNeighbors(leftToken, otherCommands);
 			leftToken = otherCommands;
 			token.getSubTokens().add(leftToken);
+		}
 
-		} else {
+		if (!createTable) {
+			Token spaces = isSpaces(leftToken.getPosContent(), false);
+			if (spaces != null) {
 
-			updateNeighbors(leftToken, insertCommand);
-			leftToken = insertCommand;
-			token.getSubTokens().add(leftToken);
+				Token condition = isCondition(spaces.getPosContent(), false);
+				if (condition != null) {
+
+					updateNeighbors(leftToken, spaces);
+					leftToken = spaces;
+					token.getSubTokens().add(leftToken);
+					updateNeighbors(spaces, condition);
+					leftToken = condition;
+					token.getSubTokens().add(leftToken);
+				}
+			}
 
 		}
 
@@ -728,8 +759,8 @@ public class LexicalParser {
 
 	}
 
-	// <CQL> ::= [<SPACES>] <COMMAND> [ [<SPACES>] <CONDITION> ] [ <SPACES>]
-	// [<COMMA> [ <SPACES>]]
+	//<CQL>	::= [<SPACES>] <COMMAND> [ <SPACES> <CONDITION> ] [ <SPACES>] [<COMA> [ <SPACES>]]
+	//<CQL>	::= [<SPACES>] <COMMAND> [ <SPACES>] [<DOT COMMA> [<SPACES>]]
 	public Token isCQL(String cql) throws LexicalParserException {
 
 		Token tokenCQL = new Token(TokenType.CQL);
@@ -761,19 +792,14 @@ public class LexicalParser {
 
 		}
 
-		Token tokenCondition = isCondition(left.getPosContent(), false);
-		if (tokenCondition != null) {
-			updateNeighbors(left, tokenCondition);
-			left = tokenCondition;
-			tokenCQL.getSubTokens().add(left);
-		}
+	 
 
-		Token tokenComma = isComma(left.getPosContent(), false);
+		Token tokenDotcomma = isDotComma(left.getPosContent(), false);
 
-		if (tokenComma != null) {
+		if (tokenDotcomma != null) {
 
-			updateNeighbors(left, tokenComma);
-			left = tokenComma;
+			updateNeighbors(left, tokenDotcomma);
+			left = tokenDotcomma;
 			tokenCQL.getSubTokens().add(left);
 		}
 
@@ -2299,4 +2325,159 @@ public class LexicalParser {
 
 		return token;
 	}
+
+	// <END CREATE TABLE> :: = ^<DOT COMMA> ? [<END CREATE TABLE>]
+	public Token isEndCreateTable(String text, boolean required)
+			throws LexicalParserException {
+
+		Token token = new Token(TokenType.END_CREATE_TABLE);
+
+		if (text.length() == 0) {
+			if (required) {
+				buildLexicalParserException(token, text);
+			}
+			return null;
+		}
+
+		Token dotComma = isDotComma(text, false);
+
+		if (dotComma != null) {
+			if (required) {
+				buildLexicalParserException(token, text);
+			}
+			return null;
+		}
+
+		token.setContent(text.substring(0, 1));
+
+		if (text.length() > 0) {
+
+			Token nextEndCreateTable = isEndCreateTable(text.substring(1),
+					false);
+			if (nextEndCreateTable != null) {
+				token.getSubTokens().add(nextEndCreateTable);
+				token.setContent(text.substring(0, text.length()
+						- nextEndCreateTable.getPosContent().length()));
+				token.setPosContent(nextEndCreateTable.getPosContent());
+			} else {
+				token.setPosContent(text.substring(1));
+			}
+		} else {
+			token.setPosContent(text.substring(0));
+		}
+
+		return token;
+	}
+
+	// <DOT COMMA> :: = ;
+	public Token isDotComma(String text, boolean required)
+			throws LexicalParserException {
+		return isSingleText(TokenType.DOT_COMMA, ";", text, false, null,
+				required);
+	}
+
+	// <START CREATE TABLE> ::= <CREATE> <SPACES> <TABLE>
+	public Token isStartCreateTable(String text, boolean required)
+			throws LexicalParserException {
+
+		Token token = new Token(TokenType.START_CREATE_TABLE);
+		Token left = null;
+
+		if (text.length() == 0) {
+			if (required) {
+				buildLexicalParserException(token, text);
+			}
+			return null;
+		}
+
+		Token create = isCreate(text, required);
+		left = create;
+
+		if (left == null) {
+			return null;
+		}
+
+		token.getSubTokens().add(left);
+
+		Token spaces = isSpaces(left.getPosContent(), required);
+		updateNeighbors(left, spaces);
+		left = spaces;
+
+		if (left == null) {
+			return null;
+		}
+
+		token.getSubTokens().add(left);
+
+		Token table = isTable(left.getPosContent(), required);
+		updateNeighbors(left, table);
+		left = table;
+
+		if (left == null) {
+			return null;
+		}
+
+		token.getSubTokens().add(left);
+
+		token.setContent(text.substring(0, text.length()
+				- left.getPosContent().length()));
+		token.setPosContent(left.getPosContent());
+
+		return token;
+	}
+
+	// <CREATE> :: = CREATE
+	public Token isCreate(String text, boolean required)
+			throws LexicalParserException {
+		return isSingleText(TokenType.CREATE, "CREATE", text, false, null,
+				required);
+	}
+
+	// <TABLE> :: = TABLE
+	public Token isTable(String text, boolean required)
+			throws LexicalParserException {
+		return isSingleText(TokenType.TABLE, "TABLE", text, false, null,
+				required);
+	}
+
+	// <CREATE TABLE COMMAND> ::= <START CREATE TABLE> <END CREATE TABLE>
+	public Token isCreateTableCommand(String text, boolean required)
+			throws LexicalParserException {
+
+		Token token = new Token(TokenType.CREATE_TABLE_COMMAND);
+		Token left = null;
+
+		if (text.length() == 0) {
+			if (required) {
+				buildLexicalParserException(token, text);
+			}
+			return null;
+		}
+
+		Token startCreateTable = isStartCreateTable(text, required);
+		left = startCreateTable;
+
+		if (left == null) {
+			return null;
+		}
+
+		token.getSubTokens().add(left);
+
+		Token endCreateTable = isEndCreateTable(left.getPosContent(), required);
+		updateNeighbors(left, endCreateTable);
+		left = endCreateTable;
+
+		if (left == null) {
+			return null;
+		}
+
+		token.getSubTokens().add(left);
+
+		token.setContent(text.substring(0, text.length()
+				- left.getPosContent().length()));
+		token.setPosContent(left.getPosContent());
+
+		return token;
+	}
+
 }

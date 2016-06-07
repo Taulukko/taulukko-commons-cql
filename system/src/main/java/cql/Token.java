@@ -1,11 +1,19 @@
 package cql;
 
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.math.NumberUtils;
+import cql.lexicalparser.exceptions.CQLFormatException;
+import cql.lexicalparser.exceptions.CQLReplaceException;
 
 public class Token {
 
@@ -78,26 +86,18 @@ public class Token {
 		return ret;
 	}
 
-	private String format(String value) {
+	private String replace(TokenType type, Object newContent,
+			AtomicInteger index, int indexSearch) throws CQLReplaceException {
 
-		if (NumberUtils.isDigits(value)) {
-			return value;
-		} else if (value.startsWith("-") || value.startsWith("+")) {
-			if (NumberUtils.isDigits(value.substring(1))) {
-				return value;
-			}
-		}
-
-		value = StringUtils.replace(value, "'", "''");
-		
-		return "'" + value + "'";
-	}
-
-	private String replace(TokenType type, String newContent,
-			AtomicInteger index, int indexSearch) {
+		CQLReplaceException lastError = new CQLReplaceException(
+				"Invalid Type in replace");
 
 		if (type.equals(this.getType())) {
-			this.setContent(newContent);
+			try {
+				this.setContent(format(newContent));
+			} catch (CQLFormatException e) {
+				throw new CQLReplaceException(e);
+			}
 			this.getSubTokens().clear();
 			this.rebuild();
 			return this.getContent();
@@ -107,7 +107,11 @@ public class Token {
 			boolean sameType = t.getType().equals(type);
 
 			if (!sameType) {
-				t.replace(type, newContent, index, indexSearch);
+				try {
+					t.replace(type, newContent, index, indexSearch);
+				} catch (CQLReplaceException cqle) {
+					lastError.addSuppressed(cqle);
+				}
 				return;
 			}
 
@@ -118,27 +122,135 @@ public class Token {
 				return;
 			}
 
-			t.setContent(format(newContent));
+			try {
+				t.setContent(format(newContent));
+			} catch (Exception cqle) {
+				lastError.addSuppressed(cqle);
+			}
+
 			index.incrementAndGet();
 			return;
 
 		});
 
+		if (lastError.getSuppressed().length > 0) {
+			throw lastError;
+		}
+
 		this.rebuild();
 		return this.getContent();
-
 	}
 
-	public String replace(TokenType token, String newContent, int index) {
+	public String replace(TokenType token, Object newContent, int index)
+			throws CQLReplaceException {
 
 		return replace(token, newContent, new AtomicInteger(0), index);
 
 	}
 
-	public String replace(String newContent, int index) {
+	public String replace(Object newContent, int index)
+			throws CQLReplaceException {
 
 		return replace(TokenType.INJECT, newContent, index);
 
+	}
+
+	public String format(Object value) throws CQLFormatException {
+		if (value instanceof String) {
+			value = ((String) value).replace("'", "''");
+			return "'" + value + "'";
+		}
+		if (value instanceof Integer || value instanceof Long
+				|| value instanceof Short || value instanceof Byte
+				|| value instanceof Float || value instanceof Double
+				|| value instanceof Boolean) {
+			return String.valueOf(value);
+		}
+
+		if (List.class.isAssignableFrom(value.getClass())) {
+			StringBuffer json = new StringBuffer();
+			@SuppressWarnings("unchecked")
+			List<Object> list = (List<Object>) value;
+
+			for (Object subvalue : list) {
+				if (json.length() == 0) {
+					json.append("[");
+				} else {
+					json.append(",");
+				}
+				json.append(format(subvalue));
+			}
+			json.append("]");
+			return json.toString();
+		}
+
+		if (Set.class.isAssignableFrom(value.getClass())) {
+			StringBuffer json = new StringBuffer();
+			@SuppressWarnings("unchecked")
+			Set<Object> list = (Set<Object>) value;
+
+			for (Object subvalue : list) {
+				if (json.length() == 0) {
+					json.append("{");
+				} else {
+					json.append(",");
+				}
+				json.append(format(subvalue));
+			}
+			json.append("}");
+			return json.toString();
+		}
+
+		if (Map.class.isAssignableFrom(value.getClass())) {
+			StringBuffer json = new StringBuffer();
+			@SuppressWarnings("unchecked")
+			Map<Object, Object> list = (Map<Object, Object>) value;
+
+			Set<Object> keys = list.keySet();
+
+			for (Object key : keys) {
+				Object subvalue = list.get(key);
+				if (json.length() == 0) {
+					json.append("{");
+				} else {
+					json.append(",");
+				}
+				json.append(format(key));
+				json.append(":");
+				json.append(format(subvalue));
+			}
+			json.append("}");
+			return json.toString();
+		}
+
+		if (value instanceof LocalDate) {
+			LocalDate dateTime = (LocalDate) value;
+
+			DateTimeFormatter formatter = DateTimeFormatter
+					.ofPattern("yyyy-MM-dd");
+
+			String formattedDateTime = dateTime.format(formatter);
+			return "'" + formattedDateTime + "'";
+		}
+
+		if (value instanceof ZonedDateTime) {
+			ZonedDateTime dateTime = (ZonedDateTime) value;
+
+			DateTimeFormatter formatter = DateTimeFormatter
+					.ofPattern("yyyy-MM-dd HH:mm:ssZ");
+
+			String formattedDateTime = dateTime.format(formatter);
+			return "'" + formattedDateTime + "'";
+		}
+
+		if (value instanceof Date) {
+			Date date = (Date) value;
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+			sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+			return "'" + sdf.format(date) + "'";
+		}
+		throw new CQLFormatException("Type unknown of "
+				+ value.getClass().getCanonicalName());
 	}
 
 	public String rebuild() {

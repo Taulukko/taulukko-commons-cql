@@ -1,5 +1,11 @@
 package cql.lexicalparser;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
+
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -102,7 +108,27 @@ public class ReplaceTest {
 	}
 
 	@Test
-	public void simpleInteger() throws CQLException {
+	public void nullTest() throws CQLException {
+
+		String cql = "INSERT INTO test (age,year,day) VALUES (?,?,?)";
+
+		Token tokenCQL = lexicalParser.isCQL(cql);
+
+		// replace ever last
+		// last (day)
+		tokenCQL.replace(TokenType.INJECT, 5, 2);
+		// left 2, last again (year)
+		tokenCQL.replace(TokenType.INJECT, null, 1);
+		// left 1, last again (age)
+		tokenCQL.replace(TokenType.INJECT, null, 0);
+		Assert.assertEquals(
+				"INSERT INTO test (age,year,day) VALUES (null,null,5)",
+				tokenCQL.getContent());
+
+	}
+
+	@Test
+	public void injectInteger() throws CQLException {
 		String cql = "INSERT INTO test (age,year,day) VALUES (?,?,?)";
 
 		Token tokenCQL = lexicalParser.isCQL(cql);
@@ -124,8 +150,8 @@ public class ReplaceTest {
 
 		// replace ever first
 		tokenCQL.replace(TokenType.INJECT, 33, 0);
-		tokenCQL.replace(TokenType.INJECT, 2016, 0);
-		tokenCQL.replace(TokenType.INJECT, 5, 0);
+		tokenCQL.replace(TokenType.INJECT, 2016, 1);
+		tokenCQL.replace(TokenType.INJECT, 5, 2);
 
 		Assert.assertEquals(
 				"INSERT INTO test (age,year,day) VALUES (33,2016,5)",
@@ -133,18 +159,84 @@ public class ReplaceTest {
 	}
 
 	@Test
-	public void simpleString() throws CQLException {
+	public void wrapper() throws CQLException {
+		String cql = "INSERT INTO test (key,name,lastname) VALUES ('ABC','Tom','Muller')";
+
+		Token tokenCQL = lexicalParser.isCQL(cql);
+
+		// replace ever last
+		// last (day)
+		tokenCQL.replace(TokenType.TABLE_NAME, "AtestA", 0);
+
+		Assert.assertEquals(
+				"INSERT INTO 'AtestA' (key,name,lastname) VALUES ('ABC','Tom','Muller')",
+				tokenCQL.getContent());
+
+		cql = "INSERT INTO test (key,name,lastname) VALUES ('ABC','Tom','Muller')";
+
+		tokenCQL = lexicalParser.isCQL(cql);
+
+		// replace ever last
+		// last (day)
+		tokenCQL.replace(TokenType.TABLE_NAME, t -> {
+			t.setContent("\"" + t.getContent() + "\"");
+		}, 0);
+
+		Assert.assertEquals(
+				"INSERT INTO \"test\" (key,name,lastname) VALUES ('ABC','Tom','Muller')",
+				tokenCQL.getContent());
+
+		cql = "INSERT INTO test as testeA (key,name,lastname) VALUES ('ABC','Tom','Muller')";
+
+		tokenCQL = lexicalParser.isCQL(cql);
+
+		// replace ever last
+		// last (day)
+		tokenCQL.replace(TokenType.TABLE_NAME, t -> {
+			t.setContent("\"" + t.getContent() + "\"");
+		}, 0);
+
+		Assert.assertEquals(
+				"INSERT INTO \"test\" as testeA (key,name,lastname) VALUES ('ABC','Tom','Muller')",
+				tokenCQL.getContent());
+
+	}
+
+	@Test
+	public void injectString() throws CQLException {
 		String cql = "INSERT INTO test (key,name,lastname) VALUES (?,?,?)";
 
 		Token tokenCQL = lexicalParser.isCQL(cql);
 
 		// replace ever first
 		tokenCQL.replace(TokenType.INJECT, "ABC", 0);
-		tokenCQL.replace(TokenType.INJECT, "Tom", 0);
-		tokenCQL.replace(TokenType.INJECT, "Muller", 0);
+		tokenCQL.replace(TokenType.INJECT, "Tom", 1);
+		tokenCQL.replace(TokenType.INJECT, "Muller", 2);
 
 		Assert.assertEquals(
 				"INSERT INTO test (key,name,lastname) VALUES ('ABC','Tom','Muller')",
+				tokenCQL.getContent());
+	}
+
+	@Test
+	public void injectDate() throws CQLException, ParseException {
+		String cql = "INSERT INTO test (key,name,create) VALUES (1,'ABC',?)";
+
+		Token tokenCQL = lexicalParser.isCQL(cql);
+
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
+
+		sdf.setTimeZone(TimeZone.getTimeZone("GMT-08"));
+
+		Date create = sdf.parse("2016-06-23 00:00:00+0300");
+
+		GregorianCalendar calendar = new GregorianCalendar();
+		calendar.setTime(create);
+		// replace ever first
+		tokenCQL.replace(TokenType.INJECT, calendar.getTime(), 0);
+
+		Assert.assertEquals(
+				"INSERT INTO test (key,name,create) VALUES (1,'ABC','2016-06-22 21:00:00+0000')",
 				tokenCQL.getContent());
 	}
 }

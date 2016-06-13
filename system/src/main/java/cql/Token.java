@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import cql.lexicalparser.ConsumerToken;
 import cql.lexicalparser.exceptions.CQLFormatException;
 import cql.lexicalparser.exceptions.CQLReplaceException;
 
@@ -23,9 +24,23 @@ public class Token {
 	private List<Token> subTokens = new ArrayList<Token>();
 	private Token after = null;
 	private Token before = null;
+	private String timeZoneGMT = "GMT-00";
 
 	public Token(TokenType type) {
 		this.type = type;
+	}
+
+	public Token(TokenType type, String timeZoneGMT) {
+		this.type = type;
+		this.timeZoneGMT = timeZoneGMT;
+	}
+
+	public String getTimeZoneGMT() {
+		return timeZoneGMT;
+	}
+
+	public void setTimeZoneGMT(String defaultGMT) {
+		this.timeZoneGMT = defaultGMT;
 	}
 
 	public TokenType getType() {
@@ -74,7 +89,7 @@ public class Token {
 
 	public Token clone() {
 
-		Token ret = new Token(getType());
+		Token ret = new Token(getType(), getTimeZoneGMT());
 
 		ret.setContent(this.getContent());
 		ret.setPosContent(this.getPosContent());
@@ -86,50 +101,37 @@ public class Token {
 		return ret;
 	}
 
-	private String replace(TokenType type, Object newContent,
+	private String replace(TokenType type, ConsumerToken process,
 			AtomicInteger index, int indexSearch) throws CQLReplaceException {
-
 		CQLReplaceException lastError = new CQLReplaceException(
 				"Invalid Type in replace");
 
 		if (type.equals(this.getType())) {
-			try {
-				this.setContent(format(newContent));
-			} catch (CQLFormatException e) {
-				throw new CQLReplaceException(e);
+
+			int get = index.getAndIncrement();
+			if (get == indexSearch) {
+
+				try {
+					process.accept(this);
+				} catch (Exception e) {
+
+					throw new CQLReplaceException(e);
+				}
+
 			}
+
 			this.getSubTokens().clear();
 			this.rebuild();
 			return this.getContent();
 		}
 
 		this.getSubTokens().stream().forEach(t -> {
-			boolean sameType = t.getType().equals(type);
-
-			if (!sameType) {
-				try {
-					t.replace(type, newContent, index, indexSearch);
-				} catch (CQLReplaceException cqle) {
-					lastError.addSuppressed(cqle);
-				}
-				return;
-			}
-
-			int get = index.get();
-			if (get > indexSearch) {
-				return;
-			} else if (get < indexSearch) {
-				return;
-			}
 
 			try {
-				t.setContent(format(newContent));
-			} catch (Exception cqle) {
-				lastError.addSuppressed(cqle);
+				t.replace(type, process, index, indexSearch);
+			} catch (CQLReplaceException e) {
+				lastError.addSuppressed(e);
 			}
-
-			index.incrementAndGet();
-			return;
 
 		});
 
@@ -141,10 +143,23 @@ public class Token {
 		return this.getContent();
 	}
 
+	public String replace(TokenType token, ConsumerToken process, int index)
+			throws CQLReplaceException {
+
+		return replace(token, process, new AtomicInteger(0), index);
+
+	}
+
 	public String replace(TokenType token, Object newContent, int index)
 			throws CQLReplaceException {
 
-		return replace(token, newContent, new AtomicInteger(0), index);
+		return replace(token, t -> {
+			try {
+				t.setContent(format(newContent));
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+		}, new AtomicInteger(0), index);
 
 	}
 
@@ -246,7 +261,7 @@ public class Token {
 		if (value instanceof Date) {
 			Date date = (Date) value;
 			SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ssZ");
-			sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+			sdf.setTimeZone(TimeZone.getTimeZone(timeZoneGMT));
 			return "'" + sdf.format(date) + "'";
 		}
 		throw new CQLFormatException("Type unknown of "

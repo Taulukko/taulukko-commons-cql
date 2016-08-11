@@ -5,6 +5,7 @@ import java.time.LocalDate;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +88,13 @@ public class Token {
 		return this.type.getName() + " [ " + this.content + " ]";
 	}
 
+	public List<Token> flatTokenList() {
+		final List<Token> ret = Arrays.asList(this);
+		ret.addAll(subTokens);
+		subTokens.forEach(token -> ret.addAll(token.flatTokenList()));
+		return ret;
+	}
+
 	public Token clone() {
 
 		Token ret = new Token(getType(), getTimeZoneGMT());
@@ -143,8 +151,62 @@ public class Token {
 		return this.getContent();
 	}
 
+	public int count(TokenType type) {
+		return count(this, type);
+	}
+
+	private int count(Token token, TokenType type) {
+		int count = (token.getType().equals(type)) ? 1 : 0;
+
+		count += token.getSubTokens().stream().mapToInt(t -> count(t, type))
+				.sum();
+
+		return count;
+	}
+
+	public String replaceAll(final TokenType token,final ConsumerToken process)
+			throws CQLReplaceException {
+		CQLReplaceException lastError = new CQLReplaceException(
+				"Invalid Type in replace");
+
+		if (token.equals(this.getType())) {
+
+			if (process != null) {
+				try {
+					process.accept(this);
+				} catch (Exception e) {
+					throw new CQLReplaceException(e);
+				}
+			}
+			this.getSubTokens().clear();
+			this.rebuild();
+			return this.getContent();
+		}
+
+		this.getSubTokens().stream().forEach(t -> {
+
+			try {
+				t.replaceAll(token, process);
+			} catch (CQLReplaceException e) {
+				lastError.addSuppressed(e);
+			}
+
+		});
+
+		if (lastError.getSuppressed().length > 0) {
+			throw lastError;
+		}
+
+		this.rebuild();
+		return this.getContent();
+	}
+
 	public String replace(TokenType token, ConsumerToken process, int index)
 			throws CQLReplaceException {
+		if (process == null) {
+			return replace(token, (Object) null, index);
+
+		}
 
 		return replace(token, process, new AtomicInteger(0), index);
 
@@ -155,7 +217,7 @@ public class Token {
 
 		return replace(token, t -> {
 			try {
-				t.setContent(format(newContent));
+				t.setContent(format(t, newContent));
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
@@ -170,7 +232,11 @@ public class Token {
 
 	}
 
-	public String format(Object value) throws CQLFormatException {
+	public String format(Token token, Object value) throws CQLFormatException {
+
+		if (value == null) {
+			return "NULL";
+		}
 		if (value instanceof String) {
 			value = ((String) value).replace("'", "''");
 			return "'" + value + "'";
@@ -193,7 +259,7 @@ public class Token {
 				} else {
 					json.append(",");
 				}
-				json.append(format(subvalue));
+				json.append(format(token, subvalue));
 			}
 			json.append("]");
 			return json.toString();
@@ -210,7 +276,7 @@ public class Token {
 				} else {
 					json.append(",");
 				}
-				json.append(format(subvalue));
+				json.append(format(token, subvalue));
 			}
 			json.append("}");
 			return json.toString();
@@ -230,9 +296,9 @@ public class Token {
 				} else {
 					json.append(",");
 				}
-				json.append(format(key));
+				json.append(format(token,key));
 				json.append(":");
-				json.append(format(subvalue));
+				json.append(format(token,subvalue));
 			}
 			json.append("}");
 			return json.toString();

@@ -14,7 +14,7 @@ import cql.Token;
 import cql.TokenType;
 import cql.lexicalparser.exceptions.CQLException;
 
-public class ReplaceTest {
+public class TokenTest {
 
 	private LexicalParser lexicalParser = null;
 
@@ -122,7 +122,58 @@ public class ReplaceTest {
 		// left 1, last again (age)
 		tokenCQL.replace(TokenType.INJECT, null, 0);
 		Assert.assertEquals(
-				"INSERT INTO test (age,year,day) VALUES (null,null,5)",
+				"INSERT INTO test (age,year,day) VALUES (NULL,NULL,5)",
+				tokenCQL.getContent());
+
+	}
+
+	@Test
+	public void count() throws CQLException {
+
+		String cql = "INSERT INTO test (age,year,day) VALUES (?,?,?)";
+
+		Token tokenCQL = lexicalParser.isCQL(cql);
+
+		// replace ever last
+		// last (day)
+		int count = tokenCQL.count(TokenType.FIELD_NAME);
+
+		Assert.assertEquals(3, count);
+
+		cql = "SELECT 1,2,3,4,5,6,7,8 FROM TEST WHERE 9=0 ";
+
+		tokenCQL = lexicalParser.isCQL(cql);
+
+		// replace ever last
+		// last (day)
+		count = tokenCQL.count(TokenType.LITERAL);
+
+		Assert.assertEquals(10, count);
+	}
+
+	@Test
+	public void replaceAll() throws CQLException {
+
+		String cql = "INSERT INTO test (age,year,day) VALUES (?,?,?)";
+
+		Token tokenCQL = lexicalParser.isCQL(cql);
+
+		tokenCQL.replaceAll(TokenType.FIELD_NAME,
+				t -> t.setContent("'" + t.getContent() + "'"));
+
+		Assert.assertEquals(
+				"INSERT INTO test ('age','year','day') VALUES (?,?,?)",
+				tokenCQL.getContent());
+
+		cql = "SELECT 1,2,3,4,5,6,7,8 FROM TEST WHERE 9=0 ";
+
+		tokenCQL = lexicalParser.isCQL(cql);
+
+		tokenCQL.replaceAll(TokenType.LITERAL,
+				t -> t.setContent("'" + t.getContent() + "'"));
+
+		Assert.assertEquals(
+				"SELECT '1','2','3','4','5','6','7','8' FROM TEST WHERE '9'='0' ",
 				tokenCQL.getContent());
 
 	}

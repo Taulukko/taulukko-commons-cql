@@ -20,28 +20,26 @@ import cql.lexicalparser.exceptions.LexicalParserException;
  * */
 
 public class LexicalParser {
-	
+
 	private String timeZoneGMT = "GMT-00";
 
-
-
 	private static final Set<String> RESERVED_WORDS = new HashSet<String>(
-			Arrays.asList("ADD", "ALL", "ALLOW", "ALTER", "AND", "ANY",
-					"APPLY", "AS", "ASC", "ASCII", "AUTHORIZE", "BATCH",
-					"BEGIN", "BIGINT", "BLOB", "BOOLEAN", "BY", "CLUSTERING",
-					"COLUMNFAMILY", "COMPACT", "COUNT", "COUNTER",
-					"CONSISTENCY", "CREATE", "DECIMAL", "DELETE", "DESC",
-					"DOUBLE", "DROP", "EACH_QUORUM", "FILTERING", "FLOAT",
-					"FROM", "GRANT", "IN", "INDEX", "INET", "INSERT", "INT",
-					"INTO", "KEY", "KEYSPACE", "KEYSPACES", "LEVEL", "LIMIT",
-					"LIST", "LOCAL_ONE", "LOCAL_QUORUM", "MAP", "MODIFY",
-					"RECURSIVE", "SUPERUSER", "OF", "ON", "ONE", "ORDER",
-					"PERMISSION", "PERMISSIONS", "PRIMARY", "QUORUM", "RENAME",
-					"REVOKE", "SCHEMA", "SELECT", "SET", "STORAGE",
-					"SUPERUSER", "TABLE", "TEXT", "TIMESTAMP", "TIMEUUID",
-					"TO", "TOKEN", "THREE", "TRUNCATE", "TTL", "TWO", "TYPE",
-					"UNLOGGED", "UPDATE", "USE", "USER", "USING", "UUID",
-					"VALUES", "VARCHAR", "VARINT", "WITH", "WRITETIME", "WHERE"));
+			Arrays.asList("ADD", "ALL", "ALTER", "AND", "ANY", "APPLY", "AS",
+					"ASC", "ASCII", "AUTHORIZE", "BATCH", "BEGIN", "BIGINT",
+					"BLOB", "BOOLEAN", "BY", "CLUSTERING", "COLUMNFAMILY",
+					"COMPACT", "COUNT", "COUNTER", "CONSISTENCY", "CREATE",
+					"DECIMAL", "DELETE", "DESC", "DOUBLE", "DROP",
+					"EACH_QUORUM", "FLOAT", "FROM", "GRANT", "IN", "INDEX",
+					"INET", "INSERT", "INT", "INTO", "KEYSPACE", "KEYSPACES",
+					"LEVEL", "LIMIT", "LIST", "LOCAL_ONE", "LOCAL_QUORUM",
+					"MAP", "MODIFY", "RECURSIVE", "SUPERUSER", "OF", "ON",
+					"ONE", "ORDER", "PERMISSION", "PERMISSIONS", "PRIMARY",
+					"QUORUM", "RENAME", "REVOKE", "SCHEMA", "SELECT", "SET",
+					"STORAGE", "SUPERUSER", "TABLE", "TEXT", "TIMESTAMP",
+					"TIMEUUID", "TO", "TOKEN", "THREE", "TRUNCATE", "TTL",
+					"TWO", "TYPE", "UNLOGGED", "UPDATE", "USE", "USER",
+					"USING", "UUID", "VALUES", "VARCHAR", "VARINT", "WITH",
+					"WRITETIME", "WHERE"));
 
 	// <SYMBOL> ::= = | + | - | / | * | ( | ) | { | } | , [ | ]
 	private static final Set<Character> SYMBOLS = new HashSet<Character>(
@@ -58,7 +56,7 @@ public class LexicalParser {
 	public void setTimeZoneGMT(String timeZoneGMT) {
 		this.timeZoneGMT = timeZoneGMT;
 	}
-	
+
 	private void buildLexicalParserException(Token token, String text)
 			throws LexicalParserException {
 		throw new LexicalParserException("Invalid "
@@ -90,7 +88,7 @@ public class LexicalParser {
 	// <ACESSOR> ::= .
 	public Token isAcessor(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.ACESSOR,this.timeZoneGMT);
+		Token token = new Token(TokenType.ACESSOR, this.timeZoneGMT);
 
 		if (text.length() == 0 || !text.startsWith(".")) {
 			if (required) {
@@ -122,7 +120,7 @@ public class LexicalParser {
 	// <CHARS> ::= ^<EMPTY>[<CHARS>](a-Z0-9_)
 	public Token isChars(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.CHARS,this.timeZoneGMT);
+		Token token = new Token(TokenType.CHARS, this.timeZoneGMT);
 
 		StringBuffer content = new StringBuffer();
 
@@ -175,16 +173,27 @@ public class LexicalParser {
 
 	}
 
-	// <COMMAND>::=<CREATE COMMAND> | <INSERT COMMAND> | <CONDITIONAL COMMAND>
+	// <COMMAND>::=<CREATE COMMAND> | <DROP COMMAND> | <INSERT COMMAND> |
+	// <CONDITIONAL COMMAND> [<SPACES> <ALLOW PARAMETER>]
 	public Token isCommand(final String text, final boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.COMMAND, this.timeZoneGMT);
 
 		Token leftToken = null;
 
 		Token createCommand = isCreateCommand(text, false);
 
 		leftToken = createCommand;
+
+		if (leftToken == null) {
+			Token insertCommand = isInsertCommand(text, false);
+			leftToken = insertCommand;
+		}
+
+		if (leftToken == null) {
+			Token dropCommand = isDropCommand(text, false);
+			leftToken = dropCommand;
+		}
 
 		if (leftToken == null) {
 			Token insertCommand = isInsertCommand(text, false);
@@ -202,6 +211,21 @@ public class LexicalParser {
 
 		token.getSubTokens().add(leftToken);
 
+		Token tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+			Token tokenAllowParameter = isAllowParameter(
+					tokenSpaces.getPosContent(), false);
+			if (tokenAllowParameter != null) {
+				updateNeighbors(leftToken, tokenSpaces);
+				leftToken = tokenSpaces;
+				token.getSubTokens().add(leftToken);
+
+				updateNeighbors(leftToken, tokenAllowParameter);
+				leftToken = tokenAllowParameter;
+				token.getSubTokens().add(leftToken);
+			}
+		}
+
 		String content = text.substring(0, text.length()
 				- leftToken.getPosContent().length());
 
@@ -217,7 +241,7 @@ public class LexicalParser {
 	// [[<SPACES>]<OTHER COMMAND>]
 	public Token isOtherCommands(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.OTHER_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.OTHER_COMMAND, this.timeZoneGMT);
 
 		Token leftToken = null;
 
@@ -309,12 +333,11 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <INSERT COMMAND> ::= <INSERT> <SPACES> [<INTO> <SPACES>] <<TABLE NAME DECLARATION>>
-		// [<SPACES>] <START_PARAMETERS> [<SPACES>] <FIELD LIST> [<SPACES>]
-		// <END_PARAMETERS> [<SPACES>] <VALUES> [<SPACES>] <START_PARAMETERS>
-		// [<SPACES>] [<SELECTOR BLOCK>] [<SPACES>] <END_PARAMETERS>
-	
- 
+	// <INSERT COMMAND> ::= <INSERT> <SPACES> [<INTO> <SPACES>] <<TABLE NAME
+	// DECLARATION>>
+	// [<SPACES>] <START_PARAMETERS> [<SPACES>] <FIELD LIST> [<SPACES>]
+	// <END_PARAMETERS> [<SPACES>] <VALUES> [<SPACES>] <START_PARAMETERS>
+	// [<SPACES>] [<SELECTOR BLOCK>] [<SPACES>] <END_PARAMETERS>
 
 	/**
 	 * @param text
@@ -324,7 +347,7 @@ public class LexicalParser {
 	 */
 	public Token isInsertCommand(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.INSERT_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.INSERT_COMMAND, this.timeZoneGMT);
 
 		Token leftToken = null;
 
@@ -360,7 +383,8 @@ public class LexicalParser {
 			token.getSubTokens().add(leftToken);
 		}
 
-		Token tokenTableNameDeclaration = isTableNameDeclaration(leftToken.getPosContent(), required);
+		Token tokenTableNameDeclaration = isTableNameDeclaration(
+				leftToken.getPosContent(), required);
 		if (tokenTableNameDeclaration == null) {
 			return null;
 		}
@@ -393,8 +417,7 @@ public class LexicalParser {
 			token.getSubTokens().add(leftToken);
 		}
 
-		Token tokenFieldList = isFieldList(leftToken.getPosContent(),
-				required);
+		Token tokenFieldList = isFieldList(leftToken.getPosContent(), required);
 		if (tokenFieldList == null) {
 			return null;
 		}
@@ -454,7 +477,8 @@ public class LexicalParser {
 			token.getSubTokens().add(leftToken);
 		}
 
-		Token tokenSelectorBlock = isSelectorBlock(leftToken.getPosContent(), required);
+		Token tokenSelectorBlock = isSelectorBlock(leftToken.getPosContent(),
+				required);
 		if (tokenSelectorBlock == null) {
 			return null;
 		}
@@ -485,118 +509,11 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <COMMAND> ::= <RESERVED WORDS> [<SPACES>] [<START_PARAMETERS><SPACES>]¹
-	// [<SELECTOR BLOCK>] [<SPACES><END_PARAMETERS>]¹ [<SPACES>] [<SYMBOL>]
-	// [<SPACES>] [<LITERAL>] [<SPACES>] [<COMMAND>]
-	public Token isOldCommand(final String text, final boolean required)
-			throws LexicalParserException {
-		Token token = new Token(TokenType.COMMAND,this.timeZoneGMT);
-
-		Token leftToken = null;
-
-		Token tokenReservedWords = isReservedWords(text, required);
-		if (tokenReservedWords == null) {
-			return null;
-		}
-
-		leftToken = tokenReservedWords;
-		token.getSubTokens().add(leftToken);
-
-		Token tokenSpaces = isSpaces(leftToken.getPosContent(), false);
-		if (tokenSpaces != null) {
-			updateNeighbors(leftToken, tokenSpaces);
-			leftToken = tokenSpaces;
-			token.getSubTokens().add(leftToken);
-		}
-
-		Token selectorBlock = isSelectorBlock(leftToken.getPosContent(), false);
-		if (selectorBlock != null) {
-			updateNeighbors(leftToken, selectorBlock);
-			leftToken = selectorBlock;
-			token.getSubTokens().add(leftToken);
-		}
-
-		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
-		if (tokenSpaces != null) {
-			updateNeighbors(leftToken, tokenSpaces);
-			leftToken = tokenSpaces;
-			token.getSubTokens().add(leftToken);
-		}
-
-		Token tokenSymbol = isSymbol(leftToken.getPosContent(), false);
-		if (tokenSymbol != null) {
-			updateNeighbors(leftToken, tokenSymbol);
-			leftToken = tokenSymbol;
-			token.getSubTokens().add(leftToken);
-		}
-
-		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
-		if (tokenSpaces != null) {
-			updateNeighbors(leftToken, tokenSpaces);
-			leftToken = tokenSpaces;
-			token.getSubTokens().add(leftToken);
-		}
-
-		Token tokenLiteral = isLiteral(leftToken.getPosContent(), false);
-		if (tokenLiteral != null) {
-			updateNeighbors(leftToken, tokenLiteral);
-			leftToken = tokenLiteral;
-			token.getSubTokens().add(leftToken);
-		}
-
-		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
-		if (tokenSpaces != null) {
-			updateNeighbors(leftToken, tokenSpaces);
-			leftToken = tokenSpaces;
-			token.getSubTokens().add(leftToken);
-		}
-
-		Token tokenAnotherComand = isCommand(leftToken.getPosContent(), false);
-		if (tokenAnotherComand != null) {
-			updateNeighbors(leftToken, tokenAnotherComand);
-			leftToken = tokenAnotherComand;
-			token.getSubTokens().add(leftToken);
-		}
-
-		String content = text.substring(0, text.length()
-				- leftToken.getPosContent().length());
-		token.setContent(content);
-		token.setPosContent(leftToken.getPosContent());
-
-		return token;
-	}
-
-	// <CONDITION> ::= <WHERE> <CONDITIONS>
+	// <CONDITION>::=<WHERE><SPACES><CONDITIONS>
 	public Token isCondition(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.CONDITION,this.timeZoneGMT);
-		Token left = null;
-		String content = text;
-
-		Token tokenWhere = isWhere(text, required);
-		left = tokenWhere;
-
-		if (left == null) {
-			return null;
-		}
-
-		token.getSubTokens().add(left);
-
-		Token tokenConditions = isConditions(left.getPosContent(), required);
-		updateNeighbors(left, tokenConditions);
-		left = tokenConditions;
-
-		if (left == null) {
-			return null;
-		}
-
-		token.getSubTokens().add(left);
-
-		content = content.substring(0, content.length()
-				- left.getPosContent().length());
-		token.setContent(content);
-		token.setPosContent(left.getPosContent());
-		return token;
+		return isDoubleTokensSpaceded(text, required, TokenType.CONDITION,
+				this::isWhere, this::isConditions);
 	}
 
 	// <CONDITION-ITEM>::= <SELECTOR ITEM
@@ -605,7 +522,7 @@ public class LexicalParser {
 	public Token isConditionItem(final String text, final boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.CONDITION_ITEM,this.timeZoneGMT);
+		Token token = new Token(TokenType.CONDITION_ITEM, this.timeZoneGMT);
 
 		Token tokenSelectorItem = isSelectorItemStrict(text, required);
 
@@ -666,32 +583,20 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <CONDITIONS> ::= <SPACES><CONDITION-ITEM>[<SPACES> <JOIN
-	// CONDITION><CONDITIONS>]
+	// <CONDITIONS>::=<CONDITION-ITEM>[<SPACES> <JOIN CONDITION> <SPACES>
+	// <CONDITIONS>]
+
 	public Token isConditions(final String text, final boolean required)
 			throws LexicalParserException {
 		Token left = null;
-		Token token = new Token(TokenType.CONDITIONS,this.timeZoneGMT);
+		Token token = new Token(TokenType.CONDITIONS, this.timeZoneGMT);
 		String content = text;
 
 		Token tokenOptionalSpace = null;
 		Token tokenOptionalJoin = null;
 		Token tokenOptionalConditions = null;
 
-		Token tokenSpaces = isSpaces(text, required);
-		left = tokenSpaces;
-
-		if (left == null) {
-			if (required) {
-				buildLexicalParserException(token, text);
-			}
-			return null;
-		}
-
-		token.getSubTokens().add(left);
-
-		Token tokenConditionItem = isConditionItem(left.getPosContent(),
-				required);
+		Token tokenConditionItem = isConditionItem(text, required);
 		updateNeighbors(left, tokenConditionItem);
 		left = tokenConditionItem;
 
@@ -711,28 +616,39 @@ public class LexicalParser {
 					tokenOptionalSpace.getPosContent(), false);
 
 			if (tokenOptionalJoin != null) {
-				tokenOptionalConditions = isConditions(
+				Token tokenOptionalSpace2 = isSpaces(
 						tokenOptionalJoin.getPosContent(), false);
 
-				if (tokenOptionalConditions != null) {
+				if (tokenOptionalSpace2 != null) {
+					tokenOptionalConditions = isConditions(
+							tokenOptionalSpace2.getPosContent(), false);
 
-					updateNeighbors(left, tokenOptionalSpace);
-					left = tokenOptionalSpace;
-					token.getSubTokens().add(tokenOptionalSpace);
+					if (tokenOptionalConditions != null) {
 
-					updateNeighbors(left, tokenOptionalJoin);
-					left = tokenOptionalJoin;
-					token.getSubTokens().add(tokenOptionalJoin);
+						updateNeighbors(left, tokenOptionalSpace);
+						left = tokenOptionalSpace;
+						token.getSubTokens().add(tokenOptionalSpace);
 
-					updateNeighbors(left, tokenOptionalConditions);
-					left = tokenOptionalConditions;
-					token.getSubTokens().add(tokenOptionalConditions);
+						updateNeighbors(left, tokenOptionalJoin);
+						left = tokenOptionalJoin;
+						token.getSubTokens().add(tokenOptionalJoin);
 
-					content = content.substring(0, content.length()
-							- tokenOptionalConditions.getPosContent().length());
-					token.setContent(content);
-					token.setPosContent(tokenOptionalConditions.getPosContent());
-					return token;
+						updateNeighbors(left, tokenOptionalSpace2);
+						left = tokenOptionalSpace2;
+						token.getSubTokens().add(tokenOptionalSpace2);
+
+						updateNeighbors(left, tokenOptionalConditions);
+						left = tokenOptionalConditions;
+						token.getSubTokens().add(tokenOptionalConditions);
+
+						content = content.substring(0, content.length()
+								- tokenOptionalConditions.getPosContent()
+										.length());
+						token.setContent(content);
+						token.setPosContent(tokenOptionalConditions
+								.getPosContent());
+						return token;
+					}
 				}
 			}
 
@@ -745,11 +661,11 @@ public class LexicalParser {
 
 	}
 
-	// <CQL>::= [<SPACES>] <COMMAND> [ <SPACES>] [<USING>] [<DOT COMMA>
+	// <CQL>::= [<SPACES>] <COMMAND> [ <SPACES>] [<USING OPTION>] [<DOT COMMA>
 	// [<SPACES>]]
 	public Token isCQL(String cql) throws LexicalParserException {
 
-		Token tokenCQL = new Token(TokenType.CQL,this.timeZoneGMT);
+		Token tokenCQL = new Token(TokenType.CQL, this.timeZoneGMT);
 		tokenCQL.setContent(cql);
 		Token left = null;
 
@@ -778,12 +694,12 @@ public class LexicalParser {
 
 		}
 
-		Token tokenUsing = isUsing(left.getPosContent(), false);
+		Token tokenUsingOption = isUsingOption(left.getPosContent(), false);
 
-		if (tokenUsing != null) {
+		if (tokenUsingOption != null) {
 
-			updateNeighbors(left, tokenUsing);
-			left = tokenUsing;
+			updateNeighbors(left, tokenUsingOption);
+			left = tokenUsingOption;
 			tokenCQL.getSubTokens().add(left);
 		}
 
@@ -830,7 +746,7 @@ public class LexicalParser {
 	// BLOCK>][<SPACES>]<END_PARAMETERS>
 	public Token isFunction(String content, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.FUNCTION,this.timeZoneGMT);
+		Token token = new Token(TokenType.FUNCTION, this.timeZoneGMT);
 
 		if (content.length() < 3) {
 			if (required) {
@@ -921,7 +837,7 @@ public class LexicalParser {
 	// <HEXA>::= [<SIGN>] [<START HEX>] <ABSOLUTE HEXA>
 	public Token isHexa(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.HEX,this.timeZoneGMT);
+		Token token = new Token(TokenType.HEX, this.timeZoneGMT);
 		Token left = null;
 
 		Token sign = isSign(text, false);
@@ -969,7 +885,7 @@ public class LexicalParser {
 	// <INJECT> ::= ?
 	public Token isInject(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.INJECT,this.timeZoneGMT);
+		Token token = new Token(TokenType.INJECT, this.timeZoneGMT);
 
 		if (text.length() == 0 || text.charAt(0) != '?') {
 			if (required) {
@@ -989,7 +905,7 @@ public class LexicalParser {
 			Function<String, Token> testerBase, TokenType type, String text,
 			boolean required) throws LexicalParserException {
 
-		Token token = new Token(type,this.timeZoneGMT);
+		Token token = new Token(type, this.timeZoneGMT);
 
 		if (text.length() == 0) {
 			if (required) {
@@ -1005,7 +921,7 @@ public class LexicalParser {
 		if (tokenTester != null) {
 			content = tokenTester;
 			subText = text.substring(tokenTester.length());
-			Token subToken = new Token(type,this.timeZoneGMT);
+			Token subToken = new Token(type, this.timeZoneGMT);
 			subToken.setContent(content);
 			subToken.setPosContent(text.substring(content.length()));
 
@@ -1045,7 +961,8 @@ public class LexicalParser {
 	public Token isInputCharacterExceptDouble(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,this.timeZoneGMT);
+		Token token = new Token(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
+				this.timeZoneGMT);
 
 		Token left = null;
 
@@ -1105,7 +1022,8 @@ public class LexicalParser {
 	public Token isInputCharacterExceptSingle(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,this.timeZoneGMT);
+		Token token = new Token(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
+				this.timeZoneGMT);
 
 		Token left = null;
 
@@ -1162,7 +1080,7 @@ public class LexicalParser {
 	public Token isItemName(final String content, final boolean required)
 			throws LexicalParserException {
 
-		Token tokenItemName = new Token(TokenType.ITEMNAME,this.timeZoneGMT);
+		Token tokenItemName = new Token(TokenType.ITEMNAME, this.timeZoneGMT);
 
 		Token tokenCaseSensitive = isItemNameCaseSensitive(content, false);
 
@@ -1200,7 +1118,8 @@ public class LexicalParser {
 	// <ITEM NAME CASE INSENSITIVE> ::= ^<NUMBER> <CHARS>
 	public Token isItemNameCaseInsensitive(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.ITEM_NAME_CASE_INSENSITIVE,this.timeZoneGMT);
+		Token token = new Token(TokenType.ITEM_NAME_CASE_INSENSITIVE,
+				this.timeZoneGMT);
 
 		Token numberToken = isNumber(text, false);
 		if (numberToken != null) {
@@ -1227,7 +1146,8 @@ public class LexicalParser {
 	public Token isItemNameCaseSensitive(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.ITEM_NAME_CASE_SENSITIVE,this.timeZoneGMT);
+		Token token = new Token(TokenType.ITEM_NAME_CASE_SENSITIVE,
+				this.timeZoneGMT);
 		Token left = null;
 
 		Token startDoubleQuoted = isDoubleQuoted(text, required);
@@ -1269,7 +1189,7 @@ public class LexicalParser {
 	// <JOIN CONDITION>::= <AND> | <OR>
 	public Token isJoinCondition(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.JOIN_CONDITION,this.timeZoneGMT);
+		Token token = new Token(TokenType.JOIN_CONDITION, this.timeZoneGMT);
 
 		Token left = isAnd(text, false);
 		if (left == null) {
@@ -1295,7 +1215,7 @@ public class LexicalParser {
 	public Token isLiteral(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.LITERAL,this.timeZoneGMT);
+		Token token = new Token(TokenType.LITERAL, this.timeZoneGMT);
 
 		if (text.length() == 0) {
 			if (required) {
@@ -1377,7 +1297,7 @@ public class LexicalParser {
 	public Token isNumber(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.NUMBER,this.timeZoneGMT);
+		Token token = new Token(TokenType.NUMBER, this.timeZoneGMT);
 
 		Token digit = isDigit(text, required);
 
@@ -1418,7 +1338,7 @@ public class LexicalParser {
 	// <RESERVED WORD> ::= SELECT,INSERT,...
 	public Token isReservedWord(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.RESERVED_WORD,this.timeZoneGMT);
+		Token token = new Token(TokenType.RESERVED_WORD, this.timeZoneGMT);
 
 		String word = consume(text, ' ');
 		if (!RESERVED_WORDS.contains(word.toUpperCase())) {
@@ -1437,7 +1357,7 @@ public class LexicalParser {
 	// <RESERVED WORDS>: <RESERVED WORD> [<SPACES> <RESERVED WORDS>]
 	public Token isReservedWords(String command, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.RESERVED_WORDS,this.timeZoneGMT);
+		Token token = new Token(TokenType.RESERVED_WORDS, this.timeZoneGMT);
 
 		token.setContent(command);
 
@@ -1484,7 +1404,7 @@ public class LexicalParser {
 	public Token isSelectorBlock(final String text, final boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.SELECTOR_BLOCK,this.timeZoneGMT);
+		Token token = new Token(TokenType.SELECTOR_BLOCK, this.timeZoneGMT);
 
 		Token leftToken = null;
 
@@ -1554,7 +1474,7 @@ public class LexicalParser {
 	public Token isSelectorItem(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.SELECTOR_ITEM,this.timeZoneGMT);
+		Token token = new Token(TokenType.SELECTOR_ITEM, this.timeZoneGMT);
 		Token left = null;
 		String content = text;
 
@@ -1596,7 +1516,8 @@ public class LexicalParser {
 	public Token isSelectorItemStrict(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.SELECTOR_ITEM_STRICT,this.timeZoneGMT);
+		Token token = new Token(TokenType.SELECTOR_ITEM_STRICT,
+				this.timeZoneGMT);
 		Token left = null;
 		String content = text;
 
@@ -1605,7 +1526,8 @@ public class LexicalParser {
 
 		if (reservedWord != null) {
 			if (required) {
-				buildLexicalParserException(token, text);
+				buildLexicalParserException(token,
+						"Unexpected reserved word in " + text);
 			} else {
 				return null;
 			}
@@ -1646,7 +1568,7 @@ public class LexicalParser {
 			String text, boolean caseSensitive, String scape, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(tokenType,this.timeZoneGMT);
+		Token token = new Token(tokenType, this.timeZoneGMT);
 		String originalText = text;
 
 		if (text.length() < singleText.length()) {
@@ -1693,7 +1615,7 @@ public class LexicalParser {
 	// <SPACES> ::= <SPACE> [<SPACES>]
 	public Token isSpaces(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.SPACES,this.timeZoneGMT);
+		Token token = new Token(TokenType.SPACES, this.timeZoneGMT);
 
 		StringBuffer content = new StringBuffer();
 
@@ -1730,7 +1652,7 @@ public class LexicalParser {
 	// QUOTED>)
 	public Token isString(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.STRING,this.timeZoneGMT);
+		Token token = new Token(TokenType.STRING, this.timeZoneGMT);
 		Token left = null;
 		String content = text;
 
@@ -1802,7 +1724,7 @@ public class LexicalParser {
 	// <SYMBOL> ::= = | + | - | / | * | ( | ) | { | } | , [ | ]
 	public Token isSymbol(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.SYMBOL,this.timeZoneGMT);
+		Token token = new Token(TokenType.SYMBOL, this.timeZoneGMT);
 
 		if (text.length() == 0 || !SYMBOLS.contains(text.charAt(0))) {
 			if (required) {
@@ -1890,7 +1812,7 @@ public class LexicalParser {
 	public Token isArray(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.ARRAY,this.timeZoneGMT);
+		Token token = new Token(TokenType.ARRAY, this.timeZoneGMT);
 		Token left = null;
 
 		Token arrayBracket = isArrayBracket(text, false);
@@ -1918,7 +1840,7 @@ public class LexicalParser {
 	public Token isMap(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.MAP,this.timeZoneGMT);
+		Token token = new Token(TokenType.MAP, this.timeZoneGMT);
 		Token left = null;
 		String content = text;
 
@@ -1975,7 +1897,7 @@ public class LexicalParser {
 	public Token isProperties(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.PROPERTIES,this.timeZoneGMT);
+		Token token = new Token(TokenType.PROPERTIES, this.timeZoneGMT);
 		Token left = null;
 		String content = text;
 
@@ -2035,7 +1957,7 @@ public class LexicalParser {
 	// <PROPERTY> ::= <KEY>[<SPACES>]<DOUBLE DOT>[<SPACES>]<LITERAL>
 	public Token isProperty(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.PROPERTY,this.timeZoneGMT);
+		Token token = new Token(TokenType.PROPERTY, this.timeZoneGMT);
 		Token left = null;
 
 		Token key = isKey(text, required);
@@ -2091,7 +2013,7 @@ public class LexicalParser {
 	public Token isKey(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.KEY,this.timeZoneGMT);
+		Token token = new Token(TokenType.KEY, this.timeZoneGMT);
 		Token left = null;
 
 		Token chars = isChars(text, false);
@@ -2125,7 +2047,7 @@ public class LexicalParser {
 	public Token isAlias(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.ALIAS,this.timeZoneGMT);
+		Token token = new Token(TokenType.ALIAS, this.timeZoneGMT);
 		Token left = null;
 
 		Token as = isAs(text, false);
@@ -2173,7 +2095,7 @@ public class LexicalParser {
 	// NAME>|<ASTERISK>)
 	public Token isFieldName(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.FIELD_NAME,this.timeZoneGMT);
+		Token token = new Token(TokenType.FIELD_NAME, this.timeZoneGMT);
 
 		Token tokenTableName = isTableName(text, false);
 		Token left = null;
@@ -2245,7 +2167,7 @@ public class LexicalParser {
 
 	public Token isDigit(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.DIGIT,this.timeZoneGMT);
+		Token token = new Token(TokenType.DIGIT, this.timeZoneGMT);
 
 		if (text.length() == 0) {
 			if (required) {
@@ -2275,7 +2197,7 @@ public class LexicalParser {
 	public Token isEndCreateTable(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.END_CREATE_TABLE,this.timeZoneGMT);
+		Token token = new Token(TokenType.END_CREATE_TABLE, this.timeZoneGMT);
 		Token left = null;
 
 		Token dotComma = isDotComma(text, false);
@@ -2316,11 +2238,19 @@ public class LexicalParser {
 				required);
 	}
 
-	// <START CREATE TABLE> ::= <CREATE> <SPACES> <TABLE>
-	public Token isStartCreateTable(String text, boolean required)
+	// <ALLOW PARAMETER> ::= <ALLOW><SPACES><FILTERING>
+	public Token isAllowParameter(String text, boolean required)
+			throws LexicalParserException {
+		return isDoubleTokensSpaceded(text, required,
+				TokenType.ALLOW_PARAMETER, this::isAllow, this::isFiltering);
+	}
+
+	// <X> ::= <A> <SPACES> <B>
+	public Token isDoubleTokensSpaceded(String text, boolean required,
+			TokenType type, LexicalTester testerA, LexicalTester testerB)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.START_CREATE_TABLE,this.timeZoneGMT);
+		Token token = new Token(type, this.timeZoneGMT);
 		Token left = null;
 
 		if (text.length() == 0) {
@@ -2330,8 +2260,8 @@ public class LexicalParser {
 			return null;
 		}
 
-		Token create = isCreate(text, required);
-		left = create;
+		Token a = testerA.is(text, required);
+		left = a;
 
 		if (left == null) {
 			return null;
@@ -2349,9 +2279,9 @@ public class LexicalParser {
 
 		token.getSubTokens().add(left);
 
-		Token table = isTable(left.getPosContent(), required);
-		updateNeighbors(left, table);
-		left = table;
+		Token b = testerB.is(left.getPosContent(), required);
+		updateNeighbors(left, b);
+		left = b;
 
 		if (left == null) {
 			return null;
@@ -2364,6 +2294,14 @@ public class LexicalParser {
 		token.setPosContent(left.getPosContent());
 
 		return token;
+	}
+
+	// <START CREATE TABLE> ::= <CREATE> <SPACES> <TABLE>
+	public Token isStartCreateTable(String text, boolean required)
+			throws LexicalParserException {
+		return isDoubleTokensSpaceded(text, required,
+				TokenType.START_CREATE_TABLE, this::isCreate, this::isTable);
+
 	}
 
 	// <CREATE> :: = CREATE
@@ -2384,7 +2322,8 @@ public class LexicalParser {
 	public Token isCreateTableCommand(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.CREATE_TABLE_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.CREATE_TABLE_COMMAND,
+				this.timeZoneGMT);
 		Token left = null;
 
 		if (text.length() == 0) {
@@ -2434,7 +2373,7 @@ public class LexicalParser {
 	// <ABSOLUTE HEXA>::= (<HEXA CHAR>|<DIGIT>)[<ABSOLUTE HEXA>]
 	public Token isAbsoluteHexa(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.ABSOLUTE_HEX,this.timeZoneGMT);
+		Token token = new Token(TokenType.ABSOLUTE_HEX, this.timeZoneGMT);
 		Token left = null;
 
 		if (text.length() == 0) {
@@ -2486,7 +2425,7 @@ public class LexicalParser {
 	public Token isArrayBrace(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.ARRAY_BRACE,this.timeZoneGMT);
+		Token token = new Token(TokenType.ARRAY_BRACE, this.timeZoneGMT);
 		Token left = null;
 		String content = text;
 
@@ -2543,7 +2482,7 @@ public class LexicalParser {
 	// BLOCK>][<SPACES>]<END BRACKET>
 	public Token isArrayBracket(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.ARRAY_BRACKET,this.timeZoneGMT);
+		Token token = new Token(TokenType.ARRAY_BRACKET, this.timeZoneGMT);
 		Token left = null;
 		String content = text;
 
@@ -2595,14 +2534,14 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <TTL>::= <START TTL> <SPACES> (<NUMBER> | <INJECT> )
-	public Token isTTL(String text, boolean required)
+	// <TTL PARAMETER>::=<TTL> <SPACES> (<NUMBER> | <INJECT> )
+	public Token isTTLParameter(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.TTL,this.timeZoneGMT);
+		Token token = new Token(TokenType.TTL_PARAMETER, this.timeZoneGMT);
 		Token left = null;
 
-		Token startTtl = isStartTTL(text, required);
+		Token startTtl = isTTL(text, required);
 		if (startTtl == null) {
 			return null;
 		}
@@ -2642,73 +2581,20 @@ public class LexicalParser {
 		return token;
 	}
 
-	// //<USING OPTIONS>::= <TTL>
-	public Token isUsingOptions(String text, boolean required)
+	// <USING OPTION>::=<START USING> <SPACES> <END USING>
+	public Token isUsingOption(String text, boolean required)
 			throws LexicalParserException {
+		return isDoubleTokensSpaceded(text, required, TokenType.USING_OPTION,
+				this::isStartUsing, this::isEndUsing);
 
-		Token token = new Token(TokenType.USING_OPTIONS,this.timeZoneGMT);
-
-		Token ttl = isTTL(text, required);
-
-		if (ttl == null) {
-			return null;
-		}
-
-		token.getSubTokens().add(ttl);
-
-		token.setContent(ttl.getContent());
-		token.setPosContent(ttl.getPosContent());
-
-		return token;
-	}
-
-	// <USING>::=<START USING> <SPACES> <USING OPTIONS>
-	public Token isUsing(String text, boolean required)
-			throws LexicalParserException {
-
-		Token token = new Token(TokenType.USING,this.timeZoneGMT);
-		Token left = null;
-
-		Token startUsing = isStartUsing(text, required);
-		if (startUsing == null) {
-			return null;
-		}
-		left = startUsing;
-		token.getSubTokens().add(left);
-
-		Token spaces = isSpaces(text.substring("USING".length()), required);
-
-		if (spaces == null) {
-			return null;
-		}
-
-		updateNeighbors(left, startUsing);
-		left = spaces;
-		token.getSubTokens().add(left);
-
-		Token usingOptions = isUsingOptions(left.getPosContent(), required);
-
-		if (usingOptions == null) {
-			return null;
-		}
-
-		updateNeighbors(left, usingOptions);
-		left = usingOptions;
-		token.getSubTokens().add(left);
-
-		String content = text.substring(0, text.length()
-				- left.getPosContent().length());
-		token.setContent(content);
-		token.setPosContent(left.getPosContent());
-
-		return token;
 	}
 
 	// <END CREATE INDEX COMMAND>::=^<DOT COMMA> <ANY> [<END CREATE INDEX
 	// COMMAND>]
 	public Token isEndCreateIndexCommand(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.END_CREATE_INDEX_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.END_CREATE_INDEX_COMMAND,
+				this.timeZoneGMT);
 		Token left = null;
 
 		if (text.length() == 0) {
@@ -2761,57 +2647,18 @@ public class LexicalParser {
 	// <START CREATE INDEX COMMAND> ::= <CREATE> <SPACES> <INDEX>
 	public Token isStartCreateIndexCommand(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.START_CREATE_INDEX_COMMAND,this.timeZoneGMT);
-		Token left = null;
+		return isDoubleTokensSpaceded(text, required,
+				TokenType.START_CREATE_INDEX_COMMAND, this::isCreate,
+				this::isIndex);
 
-		if (text.length() == 0) {
-			if (required) {
-				buildLexicalParserException(token, text);
-			}
-			return null;
-		}
-
-		Token create = isCreate(text, required);
-		left = create;
-
-		if (left == null) {
-			return null;
-		}
-
-		token.getSubTokens().add(left);
-
-		Token spaces = isSpaces(left.getPosContent(), required);
-		updateNeighbors(left, spaces);
-		left = spaces;
-
-		if (left == null) {
-			return null;
-		}
-
-		token.getSubTokens().add(left);
-
-		Token index = isIndex(left.getPosContent(), required);
-		updateNeighbors(left, index);
-		left = index;
-
-		if (left == null) {
-			return null;
-		}
-
-		token.getSubTokens().add(left);
-
-		token.setContent(text.substring(0, text.length()
-				- left.getPosContent().length()));
-		token.setPosContent(left.getPosContent());
-
-		return token;
 	}
 
 	// <CREATE INDEX COMMAND> ::= <START CREATE INDEX COMMAND> <END CREATE INDEX
 	// COMMAND>
 	public Token isCreateIndexCommand(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.CREATE_INDEX_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.CREATE_INDEX_COMMAND,
+				this.timeZoneGMT);
 		Token left = null;
 
 		if (text.length() == 0) {
@@ -2851,7 +2698,7 @@ public class LexicalParser {
 	// <CREATE COMMAND> ::= <CREATE TABLE COMMAND> | <CREATE INDEX COMMAND>
 	public Token isCreateCommand(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.CREATE_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.CREATE_COMMAND, this.timeZoneGMT);
 		Token left = null;
 
 		if (text.length() == 0) {
@@ -2885,7 +2732,7 @@ public class LexicalParser {
 	// <HEXA CHAR> :: = u(a-f)
 	public Token isHexaChar(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.HEXA_CHAR,this.timeZoneGMT);
+		Token token = new Token(TokenType.HEXA_CHAR, this.timeZoneGMT);
 
 		char character = text.charAt(0);
 		boolean characterSmall = character >= 'a' && character <= 'f';
@@ -2905,7 +2752,7 @@ public class LexicalParser {
 	// <START HEX> ::= u(0X)
 	public Token isStartHexa(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.START_HEX,this.timeZoneGMT);
+		Token token = new Token(TokenType.START_HEX, this.timeZoneGMT);
 
 		if (!text.toLowerCase().startsWith("0x")) {
 			if (required) {
@@ -2923,7 +2770,7 @@ public class LexicalParser {
 	// <ANY> ::= ?
 	public Token isAny(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.ANY,this.timeZoneGMT);
+		Token token = new Token(TokenType.ANY, this.timeZoneGMT);
 
 		if (text.length() == 0) {
 			if (required) {
@@ -2939,46 +2786,48 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <START TTL> ::= u("TTL")
-	public Token isStartTTL(String text, boolean required)
+	// <START USING> ::= <USING>
+	public Token isStartUsing(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.START_TTL,this.timeZoneGMT);
+		Token token = new Token(TokenType.START_USING, this.timeZoneGMT);
 
-		if (!text.toUpperCase().startsWith("TTL")) {
-			if (required) {
-				buildLexicalParserException(token, text);
-			}
+		Token left = isUsing(text, required);
 
+		if (left == null) {
 			return null;
 		}
 
-		token.setContent(text.substring(0, 3));
-		token.setPosContent(text.substring(3));
+		token.getSubTokens().add(left);
+
+		token.setContent(left.getContent());
+		token.setPosContent(left.getPosContent());
+
 		return token;
 	}
 
-	// <START USING> ::= "USING"
-	public Token isStartUsing(String text, boolean required)
+	// <END USING>::=<TTL PARAMETER>
+	public Token isEndUsing(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.START_USING,this.timeZoneGMT);
+		Token token = new Token(TokenType.END_USING, this.timeZoneGMT);
 
-		if (!text.toUpperCase().startsWith("USING")) {
-			if (required) {
-				buildLexicalParserException(token, text);
-			}
+		Token left = isTTLParameter(text, required);
 
+		if (left == null) {
 			return null;
 		}
 
-		token.setContent(text.substring(0, 5));
-		token.setPosContent(text.substring(5));
+		token.getSubTokens().add(left);
+
+		token.setContent(left.getContent());
+		token.setPosContent(left.getPosContent());
+
 		return token;
 	}
 
 	// <SET>::=u(SET)
 	public Token isSet(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.SET,this.timeZoneGMT);
+		Token token = new Token(TokenType.SET, this.timeZoneGMT);
 
 		if (!text.toUpperCase().startsWith("SET")) {
 			if (required) {
@@ -2996,7 +2845,7 @@ public class LexicalParser {
 	// <FROM>::=u(FROM)
 	public Token isFrom(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.FROM,this.timeZoneGMT);
+		Token token = new Token(TokenType.FROM, this.timeZoneGMT);
 
 		if (!text.toUpperCase().startsWith("FROM")) {
 			if (required) {
@@ -3015,7 +2864,7 @@ public class LexicalParser {
 	// [[<SPACES>]<END COMMON COMMAND>]]
 	public Token isEndCommonCommand(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.END_COMMON_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.END_COMMON_COMMAND, this.timeZoneGMT);
 
 		Token leftToken = null;
 
@@ -3067,10 +2916,11 @@ public class LexicalParser {
 		return token;
 	}
 
-	//<START UPDATE COMMAND> ::= <UPDATE> <SPACES> <TABLE NAME> <SPACES> <SET>
+	// <START UPDATE COMMAND> ::= <UPDATE> <SPACES> <TABLE NAME> <SPACES> <SET>
 	public Token isStartUpdateCommand(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.START_UPDATE_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.START_UPDATE_COMMAND,
+				this.timeZoneGMT);
 
 		Token leftToken = null;
 
@@ -3129,7 +2979,7 @@ public class LexicalParser {
 	// <UPDATE>::=u(UPDATE)
 	public Token isUpdate(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.UPDATE,this.timeZoneGMT);
+		Token token = new Token(TokenType.UPDATE, this.timeZoneGMT);
 
 		if (!text.toUpperCase().startsWith("UPDATE")) {
 			if (required) {
@@ -3148,7 +2998,7 @@ public class LexicalParser {
 	// <DELETE>::=u(DELETE)
 	public Token isDelete(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.DELETE,this.timeZoneGMT);
+		Token token = new Token(TokenType.DELETE, this.timeZoneGMT);
 
 		if (!text.toUpperCase().startsWith("DELETE")) {
 			if (required) {
@@ -3164,12 +3014,14 @@ public class LexicalParser {
 
 	}
 
-	//<START DELETE COMMAND> ::= <DELETE> <SPACES> [<FROM> <SPACES>] <TABLE NAME>
+	// <START DELETE COMMAND> ::= <DELETE> <SPACES> [<FROM> <SPACES>] <TABLE
+	// NAME>
 
 	public Token isStartDeleteCommand(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.START_DELETE_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.START_DELETE_COMMAND,
+				this.timeZoneGMT);
 
 		Token leftToken = null;
 
@@ -3206,6 +3058,9 @@ public class LexicalParser {
 		}
 
 		Token tokenTableName = isTableName(leftToken.getPosContent(), required);
+		if (tokenTableName == null) {
+			return null;
+		}
 		updateNeighbors(leftToken, tokenTableName);
 		leftToken = tokenTableName;
 		token.getSubTokens().add(leftToken);
@@ -3223,61 +3078,25 @@ public class LexicalParser {
 	// <UPDATE COMMAND>::=<START UPDATE COMMAND> <SPACES> <END COMMON COMMAND>
 	public Token isUpdateCommand(String text, boolean required)
 			throws LexicalParserException {
+		return isDoubleTokensSpaceded(text, required, TokenType.UPDATE_COMMAND,
+				this::isStartUpdateCommand, this::isEndCommonCommand);
 
-		Token token = new Token(TokenType.UPDATE_COMMAND,this.timeZoneGMT);
-
-		Token leftToken = null;
-
-		Token tokenStartUpdateCommand = isStartUpdateCommand(text, required);
-		if (tokenStartUpdateCommand == null) {
-			return null;
-		}
-
-		updateNeighbors(leftToken, tokenStartUpdateCommand);
-		leftToken = tokenStartUpdateCommand;
-		token.getSubTokens().add(leftToken);
-
-		Token tokenSpaces = isSpaces(leftToken.getPosContent(), required);
-		if (tokenSpaces == null) {
-			return null;
-		}
-		updateNeighbors(leftToken, tokenSpaces);
-		leftToken = tokenSpaces;
-		token.getSubTokens().add(leftToken);
-
-		Token tokenEndCommonCommand = isEndCommonCommand(
-				leftToken.getPosContent(), required);
-		if (tokenEndCommonCommand == null) {
-			return null;
-		}
-
-		updateNeighbors(leftToken, tokenEndCommonCommand);
-		leftToken = tokenEndCommonCommand;
-		token.getSubTokens().add(leftToken);
-
-		String content = text.substring(0, text.length()
-				- leftToken.getPosContent().length());
-
-		token.setContent(content);
-		token.setPosContent(leftToken.getPosContent());
-
-		return token;
 	}
 
 	// <DELETE COMMAND>::=<START DELETE COMMAND> [<SPACES> <END COMMON COMMAND>]
 	public Token isDeleteCommand(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.DELETE_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.DELETE_COMMAND, this.timeZoneGMT);
 
 		Token leftToken = null;
 
-		Token tokenStartUpdateCommand = isStartDeleteCommand(text, required);
-		if (tokenStartUpdateCommand == null) {
+		Token tokenStartDeleteCommand = isStartDeleteCommand(text, required);
+		if (tokenStartDeleteCommand == null) {
 			return null;
 		}
 
-		updateNeighbors(leftToken, tokenStartUpdateCommand);
-		leftToken = tokenStartUpdateCommand;
+		updateNeighbors(leftToken, tokenStartDeleteCommand);
+		leftToken = tokenStartDeleteCommand;
 		token.getSubTokens().add(leftToken);
 
 		Token tokenSpaces = isSpaces(leftToken.getPosContent(), false);
@@ -3309,7 +3128,7 @@ public class LexicalParser {
 	// COMMAND>) [ <SPACES> <CONDITION> ]
 	public Token isConditionalCommand(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.CONDITIONAL_COMMAND,this.timeZoneGMT);
+		Token token = new Token(TokenType.CONDITIONAL_COMMAND, this.timeZoneGMT);
 
 		Token leftToken = null;
 
@@ -3369,7 +3188,7 @@ public class LexicalParser {
 
 	public Token isEntityName(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.ENTITY_NAME,this.timeZoneGMT);
+		Token token = new Token(TokenType.ENTITY_NAME, this.timeZoneGMT);
 
 		Token tokenReservedWorld = isReservedWord(text, false);
 
@@ -3406,28 +3225,43 @@ public class LexicalParser {
 
 	}
 
-	// <TABLE NAME> ::= <ENTITY NAME>
-	// <ALIAS>::=[<AS> <SPACES>] <ENTITY NAME>
+	// <TABLE NAME>::=<ENTITY NAME>|<INJECT>
+
 	public Token isTableName(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.TABLE_NAME,this.timeZoneGMT);
+		Token token = new Token(TokenType.TABLE_NAME, this.timeZoneGMT);
+		Token left = null;
+		Token tokenEntityName = isEntityName(text, false);
 
-		Token tokenEntityName = isEntityName(text, required);
+		if (tokenEntityName != null) {
 
-		if (tokenEntityName == null) {
+			left = tokenEntityName;
+		}
+
+		if (left == null) {
+			Token tokenInject = isInject(text, required);
+
+			if (tokenInject != null) {
+
+				left = tokenInject;
+			}
+		}
+
+		if (left == null) {
 			return null;
 		}
 
-		token.getSubTokens().add(tokenEntityName);
-		token.setContent(tokenEntityName.getContent());
-		token.setPosContent(tokenEntityName.getPosContent());
+		token.getSubTokens().add(left);
+		token.setContent(left.getContent());
+		token.setPosContent(left.getPosContent());
 		return token;
 	}
 
 	// <TABLE NAME DECLARATION>::= <TABLE NAME> [<SPACES>] <ALIAS>]
 	public Token isTableNameDeclaration(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.TABLE_NAME_DECLARATION,this.timeZoneGMT);
+		Token token = new Token(TokenType.TABLE_NAME_DECLARATION,
+				this.timeZoneGMT);
 		Token leftToken = null;
 
 		Token tableName = isTableName(text, required);
@@ -3464,7 +3298,8 @@ public class LexicalParser {
 	// <FIELD NAME DECLARATION> ::= <FIELD VALUE> [<SPACES>] <ALIAS>]
 	public Token isFieldNameDeclaration(String text, boolean required)
 			throws LexicalParserException {
-		Token token = new Token(TokenType.FIELD_NAME_DECLARATION,this.timeZoneGMT);
+		Token token = new Token(TokenType.FIELD_NAME_DECLARATION,
+				this.timeZoneGMT);
 		Token leftToken = null;
 
 		Token tokenFieldValue = isFieldValue(text, required);
@@ -3502,7 +3337,7 @@ public class LexicalParser {
 	public Token isFieldValue(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.FIELD_VALUE,this.timeZoneGMT);
+		Token token = new Token(TokenType.FIELD_VALUE, this.timeZoneGMT);
 		Token left = null;
 		String content = text;
 
@@ -3558,7 +3393,7 @@ public class LexicalParser {
 	public Token isFieldList(String text, boolean required)
 			throws LexicalParserException {
 
-		Token token = new Token(TokenType.FIELD_LIST,this.timeZoneGMT);
+		Token token = new Token(TokenType.FIELD_LIST, this.timeZoneGMT);
 		Token left = null;
 		String content = text;
 
@@ -3623,6 +3458,107 @@ public class LexicalParser {
 		token.setPosContent(left.getPosContent());
 
 		return token;
+
+	}
+
+	// // <DROP> ::= u(DROP)
+	public Token isDrop(String text, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.DROP, "DROP", text, false, null, required);
+
+	}
+
+	// // <DROP COMMAND> ::= <DROP><SPACES><RESERVED WORD><SPACES><ENTITY NAME>
+	public Token isDropCommand(String text, boolean required)
+			throws LexicalParserException {
+		Token token = new Token(TokenType.DROP_COMMAND, this.timeZoneGMT);
+
+		Token leftToken = null;
+
+		Token tokenDrop = isDrop(text, required);
+		if (tokenDrop == null) {
+			return null;
+		}
+
+		updateNeighbors(leftToken, tokenDrop);
+		leftToken = tokenDrop;
+		token.getSubTokens().add(leftToken);
+
+		Token tokenSpaces = isSpaces(leftToken.getPosContent(), required);
+		if (tokenSpaces == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, tokenSpaces);
+		leftToken = tokenSpaces;
+		token.getSubTokens().add(leftToken);
+
+		Token tokenReservedWord = isReservedWord(leftToken.getPosContent(),
+				required);
+		if (tokenReservedWord == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, tokenReservedWord);
+		leftToken = tokenReservedWord;
+		token.getSubTokens().add(leftToken);
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), required);
+		if (tokenSpaces == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, tokenSpaces);
+		leftToken = tokenSpaces;
+		token.getSubTokens().add(leftToken);
+
+		Token tokenEntityName = isEntityName(leftToken.getPosContent(),
+				required);
+		if (tokenEntityName == null) {
+			return null;
+		}
+		updateNeighbors(leftToken, tokenEntityName);
+		leftToken = tokenEntityName;
+		token.getSubTokens().add(leftToken);
+
+		String content = text.substring(0, text.length()
+				- leftToken.getPosContent().length());
+		token.setContent(content);
+		token.setPosContent(leftToken.getPosContent());
+
+		return token;
+	}
+
+	// <ALLOW>::=u(ALLOW)
+	public Token isAllow(String text, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.ALLOW, "ALLOW", text, false, null,
+				required);
+
+	}
+
+	// <FILTERING>::=u(FILTERING)
+	public Token isFiltering(String text, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.FILTERING, "FILTERING", text, false,
+				null, required);
+
+	}
+
+	// <USING>::=u(USING)
+	public Token isUsing(String text, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.USING, "USING", text, false, null,
+				required);
+
+	}
+
+	// <TTL>::=u(TTL)
+	public Token isTTL(String text, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.TTL, "TTL", text, false, null, required);
 
 	}
 }

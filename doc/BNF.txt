@@ -21,7 +21,7 @@ Notes:
 
 <SPACES>::=<SPACE> [<SPACES>]
 
-<SPACE>::=" "
+<SPACE>::= " " | "/n"
 Notes: 
 1-) only content between ""
 

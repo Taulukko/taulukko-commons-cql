@@ -132,7 +132,7 @@ public class LexicalParserTest {
 
 	}
 
-	// <TABLE NAME> ::= <ENTITY NAME> | <INJECT> 
+	// <TABLE NAME> ::= <ENTITY NAME> | <INJECT>
 	@Test
 	public void tableName() throws CQLException {
 		entityName();
@@ -144,7 +144,8 @@ public class LexicalParserTest {
 		Assert.assertEquals("clients", token.getContent());
 		Assert.assertEquals(" insert", token.getPosContent());
 		Assert.assertEquals(TokenType.TABLE_NAME, token.getType());
-		Assert.assertEquals(TokenType.ENTITY_NAME, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.ENTITY_NAME, token.getSubTokens().get(0)
+				.getType());
 
 		Assert.assertEquals(token.rebuild(), token.getContent());
 
@@ -156,7 +157,8 @@ public class LexicalParserTest {
 		Assert.assertEquals(" insert", token.getPosContent());
 		Assert.assertEquals(TokenType.TABLE_NAME, token.getType());
 
-		Assert.assertEquals(TokenType.INJECT, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.INJECT, token.getSubTokens().get(0)
+				.getType());
 
 		Assert.assertEquals(token.rebuild(), token.getContent());
 
@@ -707,6 +709,10 @@ public class LexicalParserTest {
 		token = lexicalParser.isInsertCommand(cql, false);
 		Assert.assertNull(token);
 
+		cql = "INSERT INTO accounts \n(accountId,login,email,password,language) \nVALUES(?,?,?,?,?)";
+
+		token = lexicalParser.isInsertCommand(cql, true);
+		Assert.assertNotNull(token);		
 	}
 
 	// <CREATE COMMAND> ::= <CREATE TABLE COMMAND> | <CREATE INDEX COMMAND>
@@ -905,7 +911,7 @@ public class LexicalParserTest {
 	}
 
 	// <COMMAND>::=<CREATE COMMAND> | <DROP COMMAND> | <INSERT COMMAND> |
-	// <CONDITIONAL COMMAND> [<SPACES> <ALLOW PARAMETER>]
+	// <CONDITIONAL COMMAND> [<SPACES> (<LIMIT OPTION> | <ALLOW PARAMETER>)]
 	@Test
 	public void command() throws CQLException {
 
@@ -1073,6 +1079,34 @@ public class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals(
 				"select count(*) as valid from accounts where user_token = ? ALLOW FILTERING",
+				token.getContent());
+		Assert.assertEquals(" test", token.getPosContent());
+		Assert.assertEquals(TokenType.COMMAND, token.getType());
+		token = token.getSubTokens().get(0);
+		Assert.assertEquals(TokenType.CONDITIONAL_COMMAND, token.getType());
+
+		cql = "select count(*) as valid from accounts where user_token = ? limit 5 test";
+
+		token = lexicalParser.isCommand(cql, true);
+		token = lexicalParser.isCommand(cql, false);
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals(
+				"select count(*) as valid from accounts where user_token = ? limit 5",
+				token.getContent());
+		Assert.assertEquals(" test", token.getPosContent());
+		Assert.assertEquals(TokenType.COMMAND, token.getType());
+		token = token.getSubTokens().get(0);
+		Assert.assertEquals(TokenType.CONDITIONAL_COMMAND, token.getType());
+
+		cql = "select count(*) as valid from accounts where user_token = ? limit 5 allow filtering test";
+
+		token = lexicalParser.isCommand(cql, true);
+		token = lexicalParser.isCommand(cql, false);
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals(
+				"select count(*) as valid from accounts where user_token = ? limit 5 allow filtering",
 				token.getContent());
 		Assert.assertEquals(" test", token.getPosContent());
 		Assert.assertEquals(TokenType.COMMAND, token.getType());
@@ -1482,7 +1516,7 @@ public class LexicalParserTest {
 		cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
 		Assert.assertEquals(cql, cqlToken.getContent());
-		
+
 		cql = "DELETE FROM ? WHERE 'key' = ?";
 
 		cqlToken = lexicalParser.isCQL(cql);
@@ -3393,6 +3427,13 @@ public class LexicalParserTest {
 		Assert.assertEquals("  ", token.getContent());
 		Assert.assertEquals("x  ", token.getPosContent());
 		Assert.assertEquals(TokenType.SPACES, token.getType());
+		
+		cql = " \n x \n ";
+		token = lexicalParser.isSpaces(cql, false);
+		Assert.assertNotNull(token);
+		Assert.assertEquals(" \n ", token.getContent());
+		Assert.assertEquals("x \n ", token.getPosContent());
+		Assert.assertEquals(TokenType.SPACES, token.getType());
 
 	}
 
@@ -3593,6 +3634,59 @@ public class LexicalParserTest {
 
 	}
 
+	// <LIMIT OPTION> ::= <LIMIT> <SPACES> (<NUMBER>|<INJECTION>)
+	@Test
+	public void isLimitOption() throws CQLException {
+		String cql = ". teste";
+		Assert.assertNull(lexicalParser.isLimitOption(cql, false));
+
+		cql = "limit .1";
+		Assert.assertNull("Non limitOption [" + cql + "]",
+				lexicalParser.isLimitOption(cql, false));
+
+		cql = "limit abc";
+		Assert.assertNull(lexicalParser.isLimitOption(cql, false));
+
+		cql = "limit123";
+		Assert.assertNull(lexicalParser.isLimitOption(cql, false));
+
+		cql = "limit 123";
+		Token token = lexicalParser.isLimitOption(cql, true);
+		Assert.assertEquals(token.rebuild(), token.getContent());
+		cql = "limit  123 test";
+		token = lexicalParser.isLimitOption(cql, false);
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals("limit  123", token.getContent());
+		Assert.assertEquals(" test", token.getPosContent());
+		Assert.assertEquals(TokenType.LIMIT_OPTION, token.getType());
+		Assert.assertEquals(3, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.LIMIT, token.getSubTokens().get(0)
+				.getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
+				.getType());
+		Assert.assertEquals(TokenType.NUMBER, token.getSubTokens().get(2)
+				.getType());
+
+		cql = "limit ? test";
+		token = lexicalParser.isLimitOption(cql, true);
+		Assert.assertEquals(token.rebuild(), token.getContent());
+
+		token = lexicalParser.isLimitOption(cql, false);
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals("limit ?", token.getContent());
+		Assert.assertEquals(" test", token.getPosContent());
+		Assert.assertEquals(TokenType.LIMIT_OPTION, token.getType());
+		Assert.assertEquals(3, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.LIMIT, token.getSubTokens().get(0)
+				.getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
+				.getType());
+		Assert.assertEquals(TokenType.INJECT, token.getSubTokens().get(2)
+				.getType());
+	}
+
 	// <SYMBOL> ::= = | + | - | / | * | ( | ) | { | } | , [ | ]
 	@Test
 	public void symbol() throws CQLException {
@@ -3668,6 +3762,12 @@ public class LexicalParserTest {
 	@Test
 	public void where() throws CQLException {
 		simpleToken(TokenType.WHERE, lexicalParser::isWhere);
+	}
+
+	// <LIMIT> ::= u(LIMIT)
+	@Test
+	public void limit() throws CQLException {
+		simpleToken(TokenType.LIMIT, lexicalParser::isLimit);
 	}
 
 	// <ALLOW PARAMETER>::=<ALLOW PARAMETER> ::= <ALLOW><SPACES><FILTERING>

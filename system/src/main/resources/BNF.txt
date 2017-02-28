@@ -11,7 +11,7 @@ Notes:
 
 OFICIAL BNF: https://cassandra.apache.org/doc/cql/CQL.html
 
-<CQL>		::= [<SPACES>] <COMMAND> [ <SPACES> <CONDITION>  ] [ <SPACES>] [<DOT COMMA> [<SPACES>]]
+<CQL>		::= [<SPACES>] <COMMAND> [ <SPACES> <CONDITION>  ] [<LIMIT OPTION>] [ <SPACES>] [<DOT COMMA> [<SPACES>]]
 
 <SPACES> 	::= <SPACE> [<SPACES>]
 

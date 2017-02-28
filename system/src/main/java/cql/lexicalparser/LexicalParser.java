@@ -174,7 +174,8 @@ public class LexicalParser {
 	}
 
 	// <COMMAND>::=<CREATE COMMAND> | <DROP COMMAND> | <INSERT COMMAND> |
-	// <CONDITIONAL COMMAND> [<SPACES> <ALLOW PARAMETER>]
+	// <CONDITIONAL COMMAND> [<SPACES> <LIMIT OPTION>] [<SPACES> <ALLOW
+	// PARAMETER>]
 	public Token isCommand(final String text, final boolean required)
 			throws LexicalParserException {
 		Token token = new Token(TokenType.COMMAND, this.timeZoneGMT);
@@ -185,26 +186,24 @@ public class LexicalParser {
 
 		leftToken = createCommand;
 
-		if (leftToken == null) {
-			Token insertCommand = isInsertCommand(text, false);
-			leftToken = insertCommand;
-		}
+		
 
 		if (leftToken == null) {
 			Token dropCommand = isDropCommand(text, false);
 			leftToken = dropCommand;
 		}
-
+		
 		if (leftToken == null) {
 			Token insertCommand = isInsertCommand(text, false);
 			leftToken = insertCommand;
 		}
-
+		
 		if (leftToken == null) {
-			Token insertCommand = isConditionalCommand(text, required);
-			leftToken = insertCommand;
+			Token conditionalCommand = isConditionalCommand(text, required);
+			leftToken = conditionalCommand;
 		}
-
+		
+		
 		if (leftToken == null) {
 			return null;
 		}
@@ -213,6 +212,22 @@ public class LexicalParser {
 
 		Token tokenSpaces = isSpaces(leftToken.getPosContent(), false);
 		if (tokenSpaces != null) {
+			Token tokenLimitOption = isLimitOption(tokenSpaces.getPosContent(),
+					false);
+			if (tokenLimitOption != null) {
+				updateNeighbors(leftToken, tokenSpaces);
+				leftToken = tokenSpaces;
+				token.getSubTokens().add(leftToken);
+
+				updateNeighbors(leftToken, tokenLimitOption);
+				leftToken = tokenLimitOption;
+				token.getSubTokens().add(leftToken);
+			}
+		}
+
+		tokenSpaces = isSpaces(leftToken.getPosContent(), false);
+		if (tokenSpaces != null) {
+
 			Token tokenAllowParameter = isAllowParameter(
 					tokenSpaces.getPosContent(), false);
 			if (tokenAllowParameter != null) {
@@ -223,6 +238,7 @@ public class LexicalParser {
 				updateNeighbors(leftToken, tokenAllowParameter);
 				leftToken = tokenAllowParameter;
 				token.getSubTokens().add(leftToken);
+
 			}
 		}
 
@@ -234,6 +250,74 @@ public class LexicalParser {
 		token.setPosContent(leftToken.getPosContent());
 
 		return token;
+	}
+
+	// <LIMIT OPTION> ::= <LIMIT> <SPACES> <SPACES> (<NUMBER>|<INJECTION>)
+	public Token isLimitOption(String content, boolean required)
+			throws LexicalParserException {
+		Token token = new Token(TokenType.LIMIT_OPTION, this.timeZoneGMT);
+
+		Token limit = isLimit(content, required);
+		Token left = null;
+
+		if (limit == null) {
+			if (required) {
+				buildLexicalParserException(token, content);
+			}
+			return null;
+		}
+
+		left = limit;
+		token.getSubTokens().add(left);
+
+		Token spaces = isSpaces(left.getPosContent(), required);
+
+		if (spaces == null) {
+			if (required) {
+				buildLexicalParserException(token, content);
+			}
+			return null;
+
+		}
+
+		updateNeighbors(left, spaces);
+		left = spaces;
+		token.getSubTokens().add(left);
+
+		Token number = isNumber(left.getPosContent(), false);
+
+		if (number != null) {
+
+			updateNeighbors(left, number);
+			left = number;
+			token.getSubTokens().add(left);
+		} else {
+			Token inject = isInject(left.getPosContent(), required);
+			if (inject == null) {
+				if (required) {
+					buildLexicalParserException(token, content);
+				}
+				return null;
+			}
+			updateNeighbors(left, inject);
+			left = inject;
+			token.getSubTokens().add(left);
+
+		}
+		content = content.substring(0, content.length()
+				- left.getPosContent().length());
+		token.setContent(content);
+		token.setPosContent(left.getPosContent());
+		return token;
+	}
+
+	// <LIMIT> ::= u(LIMIT)
+	public Token isLimit(String content, boolean required)
+			throws LexicalParserException {
+
+		return isSingleText(TokenType.LIMIT, "LIMIT", content, false, null,
+				required);
+
 	}
 
 	// <OTHER COMMAND> ::= ^<WHERE> <RESERVED WORDS> [<SPACES>] (<SELECTOR
@@ -1620,8 +1704,9 @@ public class LexicalParser {
 		StringBuffer content = new StringBuffer();
 
 		for (int index = 0; index < text.length(); index++) {
-			if (text.charAt(index) == ' ') {
-				content.append(' ');
+			char c = text.charAt(index);
+			if (c  == ' ' || c=='\n') {
+				content.append(c);
 			} else {
 				break;
 			}

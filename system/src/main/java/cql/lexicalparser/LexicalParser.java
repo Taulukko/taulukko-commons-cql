@@ -1705,7 +1705,7 @@ public class LexicalParser {
 
 		for (int index = 0; index < text.length(); index++) {
 			char c = text.charAt(index);
-			if (c  == ' ' || c=='\n') {
+			if (c  == ' ' || c=='\n' || c=='\t') {
 				content.append(c);
 			} else {
 				break;

@@ -22,7 +22,7 @@ public class Token {
 	private TokenType type = null;
 	private String content = null;
 	private String posContent = null;
-	private List<Token> subTokens = new ArrayList<Token>();
+	private List<Token> subTokens = new ArrayList<>();
 	private Token after = null;
 	private Token before = null;
 	private String timeZoneGMT = "GMT-00";
@@ -109,10 +109,9 @@ public class Token {
 		return ret;
 	}
 
-	private String replace(TokenType type, ConsumerToken process,
-			AtomicInteger index, int indexSearch) throws CQLReplaceException {
-		CQLReplaceException lastError = new CQLReplaceException(
-				"Invalid Type in replace");
+	private String replace(TokenType type, ConsumerToken process, AtomicInteger index, int indexSearch)
+			throws CQLReplaceException {
+		CQLReplaceException lastError = new CQLReplaceException("Invalid Type in replace");
 
 		if (type.equals(this.getType())) {
 
@@ -158,16 +157,13 @@ public class Token {
 	private int count(Token token, TokenType type) {
 		int count = (token.getType().equals(type)) ? 1 : 0;
 
-		count += token.getSubTokens().stream().mapToInt(t -> count(t, type))
-				.sum();
+		count += token.getSubTokens().stream().mapToInt(t -> count(t, type)).sum();
 
 		return count;
 	}
 
-	public String replaceAll(final TokenType token,final ConsumerToken process)
-			throws CQLReplaceException {
-		CQLReplaceException lastError = new CQLReplaceException(
-				"Invalid Type in replace");
+	public String replaceAll(final TokenType token, final ConsumerToken process) throws CQLReplaceException {
+		CQLReplaceException lastError = new CQLReplaceException("Invalid Type in replace");
 
 		if (token.equals(this.getType())) {
 
@@ -201,8 +197,7 @@ public class Token {
 		return this.getContent();
 	}
 
-	public String replace(TokenType token, ConsumerToken process, int index)
-			throws CQLReplaceException {
+	public String replace(TokenType token, ConsumerToken process, int index) throws CQLReplaceException {
 		if (process == null) {
 			return replace(token, (Object) null, index);
 
@@ -212,8 +207,7 @@ public class Token {
 
 	}
 
-	public String replace(TokenType token, Object newContent, int index)
-			throws CQLReplaceException {
+	public String replace(TokenType token, Object newContent, int index) throws CQLReplaceException {
 
 		return replace(token, t -> {
 			try {
@@ -225,8 +219,7 @@ public class Token {
 
 	}
 
-	public String replace(Object newContent, int index)
-			throws CQLReplaceException {
+	public String replace(Object newContent, int index) throws CQLReplaceException {
 
 		return replace(TokenType.INJECT, newContent, index);
 
@@ -241,10 +234,8 @@ public class Token {
 			value = ((String) value).replace("'", "''");
 			return "'" + value + "'";
 		}
-		if (value instanceof Integer || value instanceof Long
-				|| value instanceof Short || value instanceof Byte
-				|| value instanceof Float || value instanceof Double
-				|| value instanceof Boolean) {
+		if (value instanceof Integer || value instanceof Long || value instanceof Short || value instanceof Byte
+				|| value instanceof Float || value instanceof Double || value instanceof Boolean) {
 			return String.valueOf(value);
 		}
 
@@ -288,17 +279,19 @@ public class Token {
 			Map<Object, Object> list = (Map<Object, Object>) value;
 
 			Set<Object> keys = list.keySet();
-
+			 
+			json.append("{");
+			boolean first = true;
 			for (Object key : keys) {
 				Object subvalue = list.get(key);
-				if (json.length() == 0) {
-					json.append("{");
+				if (first) {
+					first = false;
 				} else {
 					json.append(",");
 				}
-				json.append(format(token,key));
+				json.append(format(token, key));
 				json.append(":");
-				json.append(format(token,subvalue));
+				json.append(format(token, subvalue));
 			}
 			json.append("}");
 			return json.toString();
@@ -307,8 +300,7 @@ public class Token {
 		if (value instanceof LocalDate) {
 			LocalDate dateTime = (LocalDate) value;
 
-			DateTimeFormatter formatter = DateTimeFormatter
-					.ofPattern("yyyy-MM-dd");
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
 			String formattedDateTime = dateTime.format(formatter);
 			return "'" + formattedDateTime + "'";
@@ -317,8 +309,7 @@ public class Token {
 		if (value instanceof ZonedDateTime) {
 			ZonedDateTime dateTime = (ZonedDateTime) value;
 
-			DateTimeFormatter formatter = DateTimeFormatter
-					.ofPattern("yyyy-MM-dd HH:mm:ssZ");
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ssZ");
 
 			String formattedDateTime = dateTime.format(formatter);
 			return "'" + formattedDateTime + "'";
@@ -330,8 +321,7 @@ public class Token {
 			sdf.setTimeZone(TimeZone.getTimeZone(timeZoneGMT));
 			return "'" + sdf.format(date) + "'";
 		}
-		throw new CQLFormatException("Type unknown of "
-				+ value.getClass().getCanonicalName());
+		throw new CQLFormatException("Type unknown of " + value.getClass().getCanonicalName());
 	}
 
 	public String rebuild() {

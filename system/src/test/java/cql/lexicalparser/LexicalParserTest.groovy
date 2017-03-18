@@ -6,10 +6,8 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.Date;
-import java.util.TimeZone;
 
-import org.junit.*;
+import org.junit.*
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 
@@ -716,7 +714,7 @@ class LexicalParserTest {
 		token = lexicalParser.isInsertCommand(cql, true);
 		Assert.assertNotNull(token);
 
-		 
+
 	}
 
 	// <CREATE COMMAND> ::= <CREATE TABLE COMMAND> | <CREATE INDEX COMMAND>
@@ -1415,38 +1413,50 @@ class LexicalParserTest {
 
 		Token cqlToken = lexicalParser.isCQL(cql);
 		String newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('test',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		Assert.assertEquals(newCQL, cqlToken.replace("test", 0));
+		assert newCQL ==  cqlToken.replace("test", 0);
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES (35,?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		Assert.assertEquals(newCQL, cqlToken.replace(35, 0));
+		assert newCQL == cqlToken.replace(35, 0);
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES (-35,?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		Assert.assertEquals(newCQL, cqlToken.replace(-35, 0));
+		assert newCQL== cqlToken.replace(-35, 0);
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('test''test',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		Assert.assertEquals(newCQL, cqlToken.replace("test'test", 0));
+		assert newCQL == cqlToken.replace("test'test", 0);
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('2012-03-05 22:15:36+0000',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		sdf.setTimeZone(TimeZone.getTimeZone("Z"));
 		Date date = sdf.parse("2012-03-05 22:15:36");
-		Assert.assertEquals(newCQL, cqlToken.replace(date, 0));
+		assert newCQL ==  cqlToken.replace(date, 0);
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('2012-03-05',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		Assert.assertEquals(newCQL,
-				cqlToken.replace(LocalDate.of(2012, Month.MARCH, 05), 0));
+		assert newCQL ==
+				cqlToken.replace(LocalDate.of(2012, Month.MARCH, 05), 0);
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('2012-03-05 22:15:36+0000',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
 		ZonedDateTime zonedatetime = ZonedDateTime.of(2012, 3, 05, 22, 15, 36,
 				2873676, ZoneId.of("Z"));
 		String resultCql = cqlToken.replace(zonedatetime, 0);
-		Assert.assertEquals(newCQL, resultCql);
+		assert newCQL == resultCql;
+
+		newCQL = "INSERT INTO logs_login (id,accountId,accessMoment,IP,device) VALUES ('A','A','2012-03-05 22:15:36+0000','1:0:1:0:1:0:1:0',?)";
+
+		cqlToken = lexicalParser.isCQL(newCQL);
+		
+		resultCql = cqlToken.replace([:], 0);
+		
+		newCQL = "INSERT INTO logs_login (id,accountId,accessMoment,IP,device) VALUES ('A','A','2012-03-05 22:15:36+0000','1:0:1:0:1:0:1:0',{})";
+		
+		assert newCQL == resultCql;
+
+
 
 	}
 
@@ -1474,7 +1484,7 @@ class LexicalParserTest {
 		Assert.assertNotNull(cqlToken);
 		Assert.assertEquals(cql, cqlToken.getContent());
 
- 
+
 		cql = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES (?,?,?,[?,?,?],{?:?,?:? ,?:? },[?,?,?],{?:?,?:?,?:?})";
 		cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
@@ -3449,14 +3459,14 @@ class LexicalParserTest {
 		Assert.assertEquals(" \n ", token.getContent());
 		Assert.assertEquals("x \n ", token.getPosContent());
 		Assert.assertEquals(TokenType.SPACES, token.getType());
-		
+
 		def expected = """
 		""";
-		
+
 		cql = """${expected}x${expected}""";
 		token = lexicalParser.isSpaces(cql, false);
 		Assert.assertNotNull(token);
-		
+
 		assert expected  ==  token.getContent();
 		assert "x${expected}" == token.getPosContent();
 		assert  TokenType.SPACES ==  token.getType();

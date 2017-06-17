@@ -14,6 +14,7 @@ import org.junit.runners.JUnit4
 import cql.Token;
 import cql.TokenType;
 import cql.lexicalparser.exceptions.CQLException;
+import junit.framework.Assert
 
 @RunWith(JUnit4.class)
 class LexicalParserTest {
@@ -1289,11 +1290,17 @@ class LexicalParserTest {
 		Assert.assertEquals("X=3", token.getSubTokens().get(2).getSubTokens()
 				.get(0).getContent());
 
+		cql = "WHERE deleteLeft > 0";
+		token = lexicalParser.isCondition(cql, false);
+		token = lexicalParser.isCondition(cql, true);
+		Assert.assertEquals(token.rebuild(), token.getContent());
+		Assert.assertNotNull(token);
+		Assert.assertEquals(token.getType(), TokenType.CONDITION);
 	}
 
 	/**
-	 * <CONDITION-ITEM>::= <SELECTOR ITEM
-	 * STRICT>[<SPACES>]<SYMBOL>[<SPACES>]<SELECTOR ITEM STRICT>
+	 * <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR SYMBOL>[<SPACES>]<SELECTOR ITEM>
+
 	 */
 	@Test
 	void conditionItem() throws CQLException {
@@ -1323,6 +1330,14 @@ class LexicalParserTest {
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertEquals("key = ?", token.getContent());
 		Assert.assertEquals(" x", token.getPosContent());
+		
+		cql = "key <= ? x";
+		token = lexicalParser.isConditionItem(cql, true);
+		Assert.assertNotNull(token);
+		token = lexicalParser.isConditionItem(cql, false);
+		Assert.assertEquals(token.rebuild(), token.getContent());
+		Assert.assertEquals("key <= ?", token.getContent());
+		Assert.assertEquals(" x", token.getPosContent());
 
 		cql = "accounts.id =  3 aliasA    teste";
 		token = lexicalParser.isConditionItem(cql, true);
@@ -1337,7 +1352,7 @@ class LexicalParserTest {
 				.getSubTokens().get(0).getType());
 		boolean hasSymbol = false;
 		for (Token child : token.getSubTokens()) {
-			if (child.getType().equals(TokenType.SYMBOL)) {
+			if (child.getType().equals(TokenType.OPTIONAL_PAIR_SYMBOL)) {
 				hasSymbol = true;
 				break;
 			}
@@ -1351,7 +1366,10 @@ class LexicalParserTest {
 				.getSubTokens().get(0).getType());
 		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
 				.getType());
-		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(2)
+			Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getSubTokens().get(2)
+				.getType());
+
+		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(2).getSubTokens().get(0)
 				.getType());
 		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(3)
 				.getType());
@@ -1371,9 +1389,16 @@ class LexicalParserTest {
 		Assert.assertNull(token);
 		cql = "X=3 AND  X=5";
 		token = lexicalParser.isConditions(cql, false);
-
+		
+		 
+		cql = "deleteLeft > 0";
+		token = lexicalParser.isConditions(cql, false);
+		token = lexicalParser.isConditions(cql, true);
+		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
-		Assert.assertEquals(token.getSubTokens().size(), 5);
+		
+		Assert.assertNotNull(token);
+		Assert.assertEquals( 5,token.getSubTokens().get(0).getSubTokens(). size());
 		Assert.assertEquals(TokenType.CONDITION_ITEM,
 				token.getSubTokens().get(0).getType());
 
@@ -1437,7 +1462,7 @@ class LexicalParserTest {
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('2012-03-05',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
 		assert newCQL ==
-				cqlToken.replace(LocalDate.of(2012, Month.MARCH, 05), 0);
+		cqlToken.replace(LocalDate.of(2012, Month.MARCH, 05), 0);
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('2012-03-05 22:15:36+0000',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
@@ -1449,11 +1474,11 @@ class LexicalParserTest {
 		newCQL = "INSERT INTO logs_login (id,accountId,accessMoment,IP,device) VALUES ('A','A','2012-03-05 22:15:36+0000','1:0:1:0:1:0:1:0',?)";
 
 		cqlToken = lexicalParser.isCQL(newCQL);
-		
+
 		resultCql = cqlToken.replace([:], 0);
-		
+
 		newCQL = "INSERT INTO logs_login (id,accountId,accessMoment,IP,device) VALUES ('A','A','2012-03-05 22:15:36+0000','1:0:1:0:1:0:1:0',{})";
-		
+
 		assert newCQL == resultCql;
 
 
@@ -1468,11 +1493,24 @@ class LexicalParserTest {
 		Token cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
 		Assert.assertEquals(cql, cqlToken.getContent());
+		/*
+		 cql = "select count(*) as valid from accounts where user_token = ? ALLOW FILTERING";
+		 cqlToken = lexicalParser.isCQL(cql);
+		 Assert.assertNotNull(cqlToken);
+		 Assert.assertEquals(cql, cqlToken.getContent());
+		 */
 
-		cql = "select count(*) as valid from accounts where user_token = ? ALLOW FILTERING";
+		cql = "SELECT count(id) as total FROM cmps WHERE deleteLeft > 0";
 		cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
 		Assert.assertEquals(cql, cqlToken.getContent());
+
+
+		cql = "SELECT count(id) as total FROM cmps WHERE deleteLeft > ?";
+		cqlToken = lexicalParser.isCQL(cql);
+		Assert.assertNotNull(cqlToken);
+		Assert.assertEquals(cql, cqlToken.getContent());
+
 
 
 		cql = """
@@ -3722,8 +3760,97 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.INJECT, token.getSubTokens().get(2)
 				.getType());
 	}
+	 
+	
+	// <OPTIONAL PAIR SIMBOL> ::= <SYMBOL>[<SYMBOL>]
+	@Test
+	void optionalPairSymbol() throws CQLException {
+		String cql = ". teste";
+		Assert.assertNull(lexicalParser.isOptionalPairSymbol(cql, false));
 
-	// <SYMBOL> ::= = | + | - | / | * | ( | ) | { | } | , [ | ]
+		cql = "'. teste";
+		Assert.assertNull(lexicalParser.isOptionalPairSymbol(cql, false));
+
+		cql = " . teste'";
+		Assert.assertNull(lexicalParser.isOptionalPairSymbol(cql, false));
+
+		cql = "as'. \n adf '' ; * , ? [ ]  teste' 123";
+		Assert.assertNull(lexicalParser.isOptionalPairSymbol(cql, false));
+
+		cql = "";
+		Assert.assertNull(lexicalParser.isOptionalPairSymbol(cql, false));
+
+		cql = "*as'. \n adf '' ; * , ? [ ]  teste' 123";
+		Token token = lexicalParser.isOptionalPairSymbol(cql, true);
+		token = lexicalParser.isOptionalPairSymbol(cql, false);
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals("*", token.getContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
+				token.getPosContent());
+		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
+		Assert.assertEquals(1, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
+
+		cql = "-as'. \n adf '' ; * , ? [ ]  teste' 123";
+		token = lexicalParser.isOptionalPairSymbol(cql, true);
+		token = lexicalParser.isOptionalPairSymbol(cql, false);
+		Assert.assertEquals(token.rebuild(), token.getContent());
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals("-", token.getContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
+				token.getPosContent());
+		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
+		Assert.assertEquals(1, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
+
+		cql = "+as'. \n adf '' ; * , ? [ ]  teste' 123";
+		token = lexicalParser.isOptionalPairSymbol(cql, true);
+		token = lexicalParser.isOptionalPairSymbol(cql, false);
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals("+", token.getContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
+				token.getPosContent());
+		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
+		Assert.assertEquals(1, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
+
+		cql = "[as'. \n adf '' ; * , ? [ ]  teste' 123";
+		token = lexicalParser.isOptionalPairSymbol(cql, true);
+		token = lexicalParser.isOptionalPairSymbol(cql, false);
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals("[", token.getContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
+				token.getPosContent());
+		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
+		Assert.assertEquals(1, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
+		
+		
+		cql = "<=as'. \n adf '' ; * , ? [ ]  teste' 123";
+		token = lexicalParser.isOptionalPairSymbol(cql, true);
+		token = lexicalParser.isOptionalPairSymbol(cql, false);
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals("<=", token.getContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
+				token.getPosContent());
+		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
+		Assert.assertEquals(2, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
+		Assert.assertEquals("<", token.getSubTokens().get(0).getContent());
+		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(1).getType());
+		Assert.assertEquals("=", token.getSubTokens().get(1).getContent());
+		
+		
+
+	}
+	
+	
+	// <SYMBOL> ::= = | < | > | ! | + | - | / | * | ( | ) | { | } | , [ | ]
 	@Test
 	void symbol() throws CQLException {
 		String cql = ". teste";

@@ -37,7 +37,7 @@ Notes:
 
 <END_PARAMETERS>::=)
 
-<CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<SYMBOL>[<SPACES>]<SELECTOR ITEM>
+<CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR SYMBOL>[<SPACES>]<SELECTOR ITEM>
 
 <SELECTOR BLOCK> ::= [<SPACES>] <SELECTOR ITEM> [<SPACES>] [<COMMA><SELECTOR BLOCK>]
 
@@ -92,8 +92,13 @@ Notes:
 Notes:
 1-) Any character except ' unless is part of a double quoted ''  
 
-<SYMBOL>	::= = | + |  - |  / |  <ASTERISK> |  ( | ) | { | } | , [ | ]
+<SYMBOL> ::= = | < | > | ! | + | - | / | * | ( | ) | { | } | , [ | ]
 
+Notes: The symbols [ , < , >, ] above, dont are from BNF language but from CQL language, because eg: [ is a cql symbol
+
+
+<OPTIONAL PAIR SYMBOL> ::=  <SYMBOL>[<SYMBOL>]
+ 
 <DOT COMMA>		::= ;
 
 <COMMA> ::= ,

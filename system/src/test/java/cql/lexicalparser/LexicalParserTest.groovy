@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.function.Consumer
 
 import org.junit.*
 import org.junit.runner.RunWith
@@ -1298,6 +1299,27 @@ class LexicalParserTest {
 		Assert.assertEquals(token.getType(), TokenType.CONDITION);
 	}
 
+	private boolean hasChield(TokenType type, Token token)
+	{
+		
+		if(token.getType()==type)
+		{
+			return true;
+		}
+		
+		 
+		
+		for(Token child:token.getSubTokens())
+		{
+			if(hasChield(type,child))
+			{
+				return true;
+			}
+		}
+		
+		return false;
+ 	}
+
 	/**
 	 * <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR SYMBOL>[<SPACES>]<SELECTOR ITEM>
 	 */
@@ -1340,6 +1362,22 @@ class LexicalParserTest {
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertEquals("key <= ?", token.getContent());
 		Assert.assertEquals(" x", token.getPosContent());
+
+
+		cql = "accounts.id=true ";
+		token = lexicalParser.isConditionItem(cql, true);
+		Assert.assertEquals(token.rebuild(), token.getContent());
+		token = lexicalParser.isConditionItem(cql, false);
+
+		Assert.assertNotNull(token);
+		Assert.assertEquals("accounts.id=true", token.getContent());
+		
+		
+		assert " " ==  token.getPosContent();
+		assert true == hasChield(TokenType.BOOLEAN,token);
+		assert true == hasChield(TokenType.TRUE,token);
+		 
+
 
 		cql = "accounts.id =  3 aliasA    teste";
 		token = lexicalParser.isConditionItem(cql, true);
@@ -1978,7 +2016,7 @@ class LexicalParserTest {
 	}
 
 	@Test
-	// <HEXA>::= [<SIGN>] [<START HEX>] <ABSOLUTE HEX>
+	// <HEXA>::= [<SIGN>] <START HEX> <ABSOLUTE HEX>
 	void hexa() throws CQLException {
 		String cql = " 0x1234abcde adsfasdf ";
 		Token token = lexicalParser.isHexa(cql, false);
@@ -1987,9 +2025,13 @@ class LexicalParserTest {
 		token = lexicalParser.isHexa(cql, false);
 		Assert.assertNull(token);
 
-		cql = "e1234abc-de adsfasdf ";
+		cql = "0xe1234abc-de adsfasdf ";
 		token = lexicalParser.isHexa(cql, false);
 		Assert.assertNotNull(token);
+
+		cql = "count";
+		token = lexicalParser.isHexa(cql, false);
+		Assert.assertNull(token);
 
 		cql = "0X1234Éabcde adsfasdf ";
 		token = lexicalParser.isHexa(cql, false);
@@ -2395,14 +2437,21 @@ class LexicalParserTest {
 		cql = "'. teste";
 		Assert.assertNull(lexicalParser.isLiteral(cql, false));
 
-		 
+
 
 		cql = ". teste'";
 		Assert.assertNull(lexicalParser.isLiteral(cql, false));
 
+		cql = "abc.def";
+		Assert.assertNull(lexicalParser.isLiteral(cql, false));
+
+
+		cql = "0xe1234abc-de adsfasdf ";
+		Token token = lexicalParser.isHexa(cql, false);
+		Assert.assertNotNull(token);
 
 		cql = "trueasdf adsfasdf ";
-		Token token = lexicalParser.isLiteral(cql, false);
+		token = lexicalParser.isLiteral(cql, false);
 
 		token = lexicalParser.isLiteral(cql, false);
 
@@ -2450,7 +2499,7 @@ class LexicalParserTest {
 		cql = "é1234abcde adsfasdf ";
 		token = lexicalParser.isLiteral(cql, false);
 		Assert.assertNull(token);
- 
+
 
 	}
 
@@ -2503,21 +2552,21 @@ class LexicalParserTest {
 
 	}
 
-	
+
 	// <TRUE> ::= u(TRUE)
 	@Test
 	void trueTest() throws CQLException {
 		simpleToken(TokenType.TRUE, lexicalParser.&isTrue);
 
 	}
-	
+
 	// <FALSE> ::= u(FALSE)
 	@Test
 	void falseTest() throws CQLException {
 		simpleToken(TokenType.FALSE, lexicalParser.&isFalse);
 
 	}
-	
+
 	// <BOOLEAN> ::= <FALSE> | <TRUE>
 	@Test
 	void booleanTest() throws CQLException {
@@ -2537,7 +2586,7 @@ class LexicalParserTest {
 		token = lexicalParser.isBoolean(cql, true);
 		Assert.assertNotNull(token);
 		Assert.assertEquals(TokenType.TRUE,token.getSubTokens().get(0).getType());
- 
+
 
 		cql = "false";
 		token = lexicalParser.isBoolean(cql, true);
@@ -2956,6 +3005,13 @@ class LexicalParserTest {
 		Assert.assertEquals("'. \n adf '' ; * ?  teste'", token.getContent());
 		Assert.assertEquals(" 123'", token.getPosContent());
 		Assert.assertEquals(TokenType.FIELD_VALUE, token.getType());
+		Assert.assertEquals(1, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0)
+				.getType());
+
+		cql = "true";
+		token = lexicalParser.isFieldValue(cql, true);
+		token = lexicalParser.isFieldValue(cql, false);
 		Assert.assertEquals(1, token.getSubTokens().size());
 		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0)
 				.getType());

@@ -859,7 +859,7 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <HEXA>::= [<SIGN>] [<START HEX>] <ABSOLUTE HEXA>
+	// <HEXA>::= [<SIGN>] <START HEX> <ABSOLUTE HEXA>
 	public Token isHexa(String text, boolean required) throws LexicalParserException {
 		Token token = new Token(TokenType.HEX, this.timeZoneGMT);
 		Token left = null;
@@ -877,20 +877,17 @@ public class LexicalParser {
 
 		String posContent = (left == null) ? text : left.getPosContent();
 
-		Token startHex = isStartHexa(posContent, false);
-		if (startHex != null) {
-
-			updateNeighbors(left, startHex);
-
-			left = startHex;
-
-			token.getSubTokens().add(left);
-
+		Token startHex = isStartHexa(posContent, required);
+		if (startHex == null) {
+			return null;
 		}
+		updateNeighbors(left, startHex);
 
-		posContent = (left == null) ? text : left.getPosContent();
+		left = startHex;
 
-		Token absoluteHex = isAbsoluteHexa(posContent, required);
+		token.getSubTokens().add(left);
+
+		Token absoluteHex = isAbsoluteHexa(left.getPosContent(), required);
 
 		if (absoluteHex == null) {
 			return null;
@@ -3267,7 +3264,7 @@ public class LexicalParser {
 		return token;
 	}
 
-	// <FIELD VALUE> ::= <FUNCTION> | <ARRAY> | <MAP> | <FIELD NAME>,<LITERAL>
+	// <FIELD VALUE> ::= <FUNCTION> | <ARRAY> | <MAP> | <LITERAL> | <FIELD NAME>
 	public Token isFieldValue(String text, boolean required) throws LexicalParserException {
 
 		Token token = new Token(TokenType.FIELD_VALUE, this.timeZoneGMT);
@@ -3288,21 +3285,22 @@ public class LexicalParser {
 			updateNeighbors(left, tokenmap);
 			left = tokenmap;
 		}
+
 		if (left == null) {
-			Token tokenFieldName = isFieldName(text, false);
-			updateNeighbors(left, tokenFieldName);
-			left = tokenFieldName;
+			Token tokenLiteral = isLiteral(text, false);
+			updateNeighbors(left, tokenLiteral);
+			left = tokenLiteral;
 
 		}
 
 		if (left == null) {
-			Token tokenLiteral = isLiteral(text, required);
-			left = tokenLiteral;
+			Token tokenFieldName = isFieldName(text, required);
+			updateNeighbors(left, tokenFieldName);
+			left = tokenFieldName;
 
 			if (left == null) {
 				return null;
 			}
-
 		}
 
 		token.getSubTokens().add(left);

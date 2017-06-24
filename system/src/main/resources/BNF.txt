@@ -40,24 +40,26 @@ Notes:
 
 <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR SYMBOL>[<SPACES>]<SELECTOR ITEM>
 
-<SELECTOR BLOCK> ::= [<SPACES>] <SELECTOR ITEM> [<SPACES>] [<COMMA><SELECTOR BLOCK>]
+<SELECTOR ITEM>::=<SELECTOR ITEM STRICT> [<SPACES><ALIAS>]
 
+<ALIAS>::=[<AS> <SPACES>] <ENTITY NAME>
 
+<ENTITY NAME> ::= ^<RESERVED WORD> (<ITEM NAME CASE SENSITIVE> | <ITEM NAME CASE INSENSITIVE>)
 
+<AS> :: = AS
 
-TODO 1-) Faltou corrigir os que estão com erro, do menor pro mais complexo
+<SELECTOR BLOCK> ::= <FIELD VALUE> [[<SPACES>] <COMMA> [<SPACES>] <SELECTOR BLOCK>]
 
-TODO 2-) Faltou o teste de Alias
+<SELECTOR ITEM STRICT> ::= ^<RESERVED WORD> <FIELD VALUE>
 
-TODO 3-) Acredito que existam tokens faltantes, fazer os testes desses  
+<FIELD NAME DECLARATION> ::= <FIELD VALUE> [<SPACES>] <ALIAS>]
 
-TODO 4-) Alias =><SELECTOR ITEM>	::= ^<RESERVED WORD> [<ITEM NAME> [<ACESSOR>]] <ITEM NAME>  | <INJECT> | <LITERAL> | <FUNCTION>  
- 
-TODO 5-) Faltou também varrer o LexicalParser em busca de erros, principalmente falta de updateNeibors ou falta de addSubTokens
-
+<FIELD VALUE> ::= <FUNCTION> | <ARRAY> | <MAP> | <LITERAL> | <FIELD NAME> 
+     
 <ACESSOR>	::= .
 
 <ITEM NAME>	::= <ITEM NAME CASE SENSITIVE> | <ITEM NAME CASE INSENSITIVE> | <ASTERISK>
+
 
 <ITEM NAME CASE SENSITIVE>	::= "<CHARS>" 
 
@@ -80,7 +82,14 @@ Notes:
 
 <FALSE> ::= u(FALSE)
 
-<HEXA>		::= (a-f)|(A-F)|(0-9)|-[<HEXA>]
+<HEXA>::= [<SIGN>] <START HEX> <ABSOLUTE HEXA>
+
+<START HEX> ::= u(0X)
+
+<ABSOLUTE HEXA>::= (<HEXA CHAR>|<DIGIT>)[<ABSOLUTE HEXA>]
+
+<HEXA CHAR> :: = u(a-f)
+
 Notes: 
 1-) The position of the hyphen will not be validated	
 

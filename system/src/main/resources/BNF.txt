@@ -8,6 +8,7 @@ Notes:
 1-) u(TOKEN) means an uncasesensitive token
 2-) ^TOKEN means a not token
 3-) %s any text
+4-) " must be ignoret, less is /" as a true " symbol eg: "t" means t, /"t/" means "t"
 
 OFICIAL BNF: https://cassandra.apache.org/doc/cql/CQL.html
 
@@ -71,7 +72,13 @@ Notes:
 
 <CHARS>		::= [<CHARS>](a-Z0-9)
 
-<LITERAL>	::= <NUMBER> | <STRING> | <HEXA>
+<LITERAL>	::= <NUMBER> | <STRING> | <HEXA> | <BOOLEAN>
+
+<BOOLEAN>	::= <TRUE> | <FALSE>
+
+<TRUE> ::= u(TRUE)
+
+<FALSE> ::= u(FALSE)
 
 <HEXA>		::= (a-f)|(A-F)|(0-9)|-[<HEXA>]
 Notes: 
@@ -83,7 +90,7 @@ Notes:
 
 <SINGLE QUOTED> ::= '^'
 
-<DOUBLE QUOTED> ::= "^"
+<DOUBLE QUOTED> ::= /"^/"
 
 <INPUT CHARACTER EXCEPT SINGLE> ::= (^<SINGLE QUOTED>%s)[<INPUT CHARACTER EXCEPT SINGLE>]
 
@@ -99,7 +106,7 @@ Notes: The symbols [ , < , >, ] above, dont are from BNF language but from CQL l
 
 <OPTIONAL PAIR SYMBOL> ::=  <SYMBOL>[<SYMBOL>]
  
-<DOT COMMA>		::= ;
+<DOT COMMA>	::= ;
 
 <COMMA> ::= ,
 
@@ -111,13 +118,11 @@ Notes: The symbols [ , < , >, ] above, dont are from BNF language but from CQL l
 
 <JOIN CONDITION>::= <AND> | <OR>
 
-<AND> 		::= u(AND)
+<AND> 	::= u(AND)
 
-<OR>		::= u(OR)
+<OR>	::= u(OR)
 
-
-u(x) ::= case insensitive
-
+ 
 Examples:
 
 1-) SELECT * FROM MyColumnFamily;

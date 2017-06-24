@@ -23,8 +23,8 @@ public class LexicalParser {
 
 	private String timeZoneGMT = "GMT-00";
 
-	private static final Set<String> RESERVED_WORDS = new HashSet<String>(Arrays.asList("ADD", "ALL", "ALTER", "AND",
-			"ANY", "APPLY", "AS", "ASC", "ASCII", "AUTHORIZE", "BATCH", "BEGIN", "BIGINT", "BLOB", "BOOLEAN", "BY",
+	private static final Set<String> RESERVED_WORDS = new HashSet<>(Arrays.asList("ADD", "ALL", "ALTER", "AND", "ANY",
+			"APPLY", "AS", "ASC", "ASCII", "AUTHORIZE", "BATCH", "BEGIN", "BIGINT", "BLOB", "BOOLEAN", "BY",
 			"CLUSTERING", "COLUMNFAMILY", "COMPACT", "COUNT", "COUNTER", "CONSISTENCY", "CREATE", "DECIMAL", "DELETE",
 			"DESC", "DOUBLE", "DROP", "EACH_QUORUM", "FLOAT", "FROM", "GRANT", "IN", "INDEX", "INET", "INSERT", "INT",
 			"INTO", "KEYSPACE", "KEYSPACES", "LEVEL", "LIMIT", "LIST", "LOCAL_ONE", "LOCAL_QUORUM", "MAP", "MODIFY",
@@ -35,7 +35,7 @@ public class LexicalParser {
 
 	// <SYMBOL> ::= = | + | - | / | * | ( | ) | { | } | , [ | ]
 	private static final Set<Character> SYMBOLS = new HashSet<>(
-			Arrays.asList('=', '+','<','>','!', '-', '/', '*', '(', ')', '{', '}', ',', '[', ']'));
+			Arrays.asList('=', '+', '<', '>', '!', '-', '/', '*', '(', ')', '{', '}', ',', '[', ']'));
 
 	public LexicalParser() {
 	}
@@ -95,7 +95,7 @@ public class LexicalParser {
 	}
 
 	// <ASTERISK> ::= *
-	private Token isAsterisk(String text, boolean required) throws LexicalParserException {
+	public Token isAsterisk(String text, boolean required) throws LexicalParserException {
 		return isSingleText(TokenType.ASTERISK, "*", text, required);
 
 	}
@@ -557,8 +557,8 @@ public class LexicalParser {
 		return isDoubleTokensSpaceded(text, required, TokenType.CONDITION, this::isWhere, this::isConditions);
 	}
 
-	//<CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR SYMBOL>[<SPACES>]<SELECTOR ITEM>
-
+	// <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR
+	// SYMBOL>[<SPACES>]<SELECTOR ITEM>
 
 	public Token isConditionItem(final String text, final boolean required) throws LexicalParserException {
 
@@ -685,9 +685,7 @@ public class LexicalParser {
 
 		}
 
-
-		content = content.substring(0,
-				content.length() - left.getPosContent().length());
+		content = content.substring(0, content.length() - left.getPosContent().length());
 
 		token.setContent(content);
 		token.setPosContent(left.getPosContent());
@@ -1210,7 +1208,7 @@ public class LexicalParser {
 	}
 
 	/**
-	 * <LITERAL> ::= (<NUMBER> | <STRING> | <INJECT> | <HEXA>)^<CHARS>
+	 * <LITERAL> ::= <NUMBER> | <STRING> | <INJECT> | <BOOLEAN>| <HEXA>
 	 */
 
 	public Token isLiteral(String text, boolean required) throws LexicalParserException {
@@ -1232,13 +1230,6 @@ public class LexicalParser {
 			token.setPosContent(tokenNumber.getPosContent());
 			token.getSubTokens().add(tokenNumber);
 
-			if (isChars(token.getPosContent(), false) != null) {
-				if (required) {
-					buildLexicalParserException(token, text);
-				} else {
-					return null;
-				}
-			}
 			return token;
 		}
 
@@ -1248,13 +1239,7 @@ public class LexicalParser {
 			token.setContent(tokenString.getContent());
 			token.setPosContent(tokenString.getPosContent());
 			token.getSubTokens().add(tokenString);
-			if (isChars(token.getPosContent(), false) != null) {
-				if (required) {
-					buildLexicalParserException(token, text);
-				} else {
-					return null;
-				}
-			}
+
 			return token;
 		}
 
@@ -1264,13 +1249,14 @@ public class LexicalParser {
 			token.setContent(tokenInject.getContent());
 			token.setPosContent(tokenInject.getPosContent());
 
-			if (isChars(token.getPosContent(), false) != null) {
-				if (required) {
-					buildLexicalParserException(token, text);
-				} else {
-					return null;
-				}
-			}
+			return token;
+		}
+
+		Token tokenBoolean = isBoolean(text, false);
+		if (tokenBoolean != null) {
+			token.getSubTokens().add(tokenBoolean);
+			token.setContent(tokenBoolean.getContent());
+			token.setPosContent(tokenBoolean.getPosContent());
 
 			return token;
 		}
@@ -1283,14 +1269,52 @@ public class LexicalParser {
 		token.setContent(tokenHexa.getContent());
 		token.setPosContent(tokenHexa.getPosContent());
 		token.getSubTokens().add(tokenHexa);
-		if (isChars(token.getPosContent(), false) != null) {
+
+		return token;
+	}
+
+	// <BOOLEAN> ::= <TRUE> | <FALSE>
+	public Token isBoolean(String text, boolean required) throws LexicalParserException {
+		Token token = new Token(TokenType.BOOLEAN, this.timeZoneGMT);
+
+		if (text.length() == 0) {
 			if (required) {
 				buildLexicalParserException(token, text);
 			} else {
 				return null;
 			}
 		}
+
+		Token tokenTrue = isTrue(text, false);
+		if (tokenTrue != null) {
+
+			token.setContent(tokenTrue.getContent());
+			token.setPosContent(tokenTrue.getPosContent());
+			token.getSubTokens().add(tokenTrue);
+
+			return token;
+		}
+
+		Token tokenFalse = isFalse(text, required);
+		if (tokenFalse == null) {
+			return null;
+		}
+
+		token.setContent(tokenFalse.getContent());
+		token.setPosContent(tokenFalse.getPosContent());
+		token.getSubTokens().add(tokenFalse);
+
 		return token;
+	}
+
+	// <FALSE> ::= u(FALSE)
+	public Token isFalse(String text, boolean required) throws LexicalParserException {
+		return isSingleText(TokenType.FALSE, "FALSE", text, false, null, required);
+	}
+
+	// <TRUE> ::= u(TRUE)
+	public Token isTrue(String text, boolean required) throws LexicalParserException {
+		return isSingleText(TokenType.TRUE, "TRUE", text, false, null, required);
 	}
 
 	// <NUMBER> ::= <DIGIT>[<NUMBER>]
@@ -1699,7 +1723,7 @@ public class LexicalParser {
 		return token;
 	}
 
-	//<SYMBOL> ::= = | < | > | ! | + | - | / | * | ( | ) | { | } | , [ | ]
+	// <SYMBOL> ::= = | < | > | ! | + | - | / | * | ( | ) | { | } | , [ | ]
 	public Token isSymbol(String text, boolean required) throws LexicalParserException {
 		Token token = new Token(TokenType.SYMBOL, this.timeZoneGMT);
 
@@ -1732,11 +1756,10 @@ public class LexicalParser {
 
 		left = symbolA;
 		token.getSubTokens().add(symbolA);
-		
 
 		Token symbolB = isSymbol(left.getPosContent(), false);
 
-		if (symbolB == null) {			 
+		if (symbolB == null) {
 			content = content.substring(0, content.length() - left.getPosContent().length());
 			token.setContent(content);
 			token.setPosContent(left.getPosContent());
@@ -1745,13 +1768,13 @@ public class LexicalParser {
 
 		left = symbolB;
 		token.getSubTokens().add(symbolB);
-		
+
 		updateNeighbors(left, symbolB);
-		
+
 		content = content.substring(0, content.length() - left.getPosContent().length());
 		token.setContent(content);
 		token.setPosContent(left.getPosContent());
-		return token; 
+		return token;
 	}
 
 	// <INSERT> ::= u(INSERT)
@@ -3248,16 +3271,11 @@ public class LexicalParser {
 	public Token isFieldValue(String text, boolean required) throws LexicalParserException {
 
 		Token token = new Token(TokenType.FIELD_VALUE, this.timeZoneGMT);
-		Token left = null;
 		String content = text;
 
-		if (left == null) {
+		Token tokenFunction = isFunction(text, false);
 
-			Token tokenFunction = isFunction(text, false);
-
-			updateNeighbors(left, tokenFunction);
-			left = tokenFunction;
-		}
+		Token left = tokenFunction;
 
 		if (left == null) {
 			Token tokenarray = isArray(text, false);

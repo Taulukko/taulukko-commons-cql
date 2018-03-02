@@ -23,13 +23,13 @@ class LexicalParserTest {
 	private LexicalParser lexicalParser = null;
 
 	@Before
-	void cleanup() throws CQLException {
+	public void cleanup() throws CQLException {
 		lexicalParser = new LexicalParser();
 	}
 
 	// <ACESSOR> ::= .
 	@Test
-	void acessor() throws CQLException {
+	public void acessor() throws CQLException {
 		String cql = " . ";
 		Token token = lexicalParser.isAcessor(cql, false);
 		Assert.assertNull(token);
@@ -56,14 +56,14 @@ class LexicalParserTest {
 
 	// <AND> ::= u(AND)
 	@Test
-	void and() throws CQLException {
+	public void and() throws CQLException {
 		LexicalTester l =  lexicalParser.&isAnd;
 		simpleToken(TokenType.AND,l);
 	}
 
 	// <COMA> ::= ,
 	@Test
-	void comma() throws CQLException {
+	public void comma() throws CQLException {
 		String cql = "algo,teste";
 		Token token = lexicalParser.isComma(cql, false);
 		Assert.assertNull(token);
@@ -81,7 +81,7 @@ class LexicalParserTest {
 
 	// <INSERT> ::= u(INSERT)
 	@Test
-	void insert() throws CQLException {
+	public void insert() throws CQLException {
 		simpleToken(TokenType.INSERT, lexicalParser.&isInsert);
 
 	}
@@ -89,7 +89,7 @@ class LexicalParserTest {
 	// <FIELD NAME> ::= [<TABLE NAME>[<SPACES>]<ACESSOR>[<SPACES>]] (<ENTITY
 	// NAME>|<ASTERISK>)
 	@Test
-	void fieldName() throws CQLException {
+	public void fieldName() throws CQLException {
 		String cql = "select ";
 		Token token = lexicalParser.isFieldName(cql, false);
 		Assert.assertNull(token);
@@ -111,7 +111,7 @@ class LexicalParserTest {
 
 	// <ANY> ::= ?
 	@Test
-	void any() throws CQLException {
+	public void any() throws CQLException {
 		String cql = "";
 		Token token = lexicalParser.isAny(cql, false);
 		Assert.assertNull(token);
@@ -129,14 +129,14 @@ class LexicalParserTest {
 
 	// <AS> :: = AS
 	@Test
-	void tokenAs() throws CQLException {
+	public void tokenAs() throws CQLException {
 		simpleToken(TokenType.AS, lexicalParser.&isAs);
 
 	}
 
 	// <TABLE NAME> ::= <ENTITY NAME> | <INJECT>
 	@Test
-	void tableName() throws CQLException {
+	public void tableName() throws CQLException {
 		entityName();
 
 		String cql = "clients insert";
@@ -169,7 +169,7 @@ class LexicalParserTest {
 	// <FIELD NAME DECLARATION> ::= <FIELD VALUE> [<SPACES>] <ALIAS>]
 
 	@Test
-	void fieldNameDeclaration() throws CQLException {
+	public void fieldNameDeclaration() throws CQLException {
 		String cql = "+select ";
 		Token token = lexicalParser.isFieldNameDeclaration(cql, false);
 		Assert.assertNull(token);
@@ -282,7 +282,7 @@ class LexicalParserTest {
 
 	// <TABLE NAME DECLARATION>::= <TABLE NAME> [<SPACES>] <ALIAS>]
 	@Test
-	void tableNameDeclaration() throws CQLException {
+	public void tableNameDeclaration() throws CQLException {
 		String cql = "+select ";
 		Token token = lexicalParser.isTableNameDeclaration(cql, false);
 		Assert.assertNull(token);
@@ -335,7 +335,7 @@ class LexicalParserTest {
 
 	// <ALIAS>::=[<AS> <SPACES>] <ENTITY NAME>
 	@Test
-	void alias() throws CQLException {
+	public void alias() throws CQLException {
 		String cql = "+select ";
 		Token token = lexicalParser.isAlias(cql, false);
 		Assert.assertNull(token);
@@ -390,13 +390,13 @@ class LexicalParserTest {
 
 	// <INTO> ::= u(INTO)
 	@Test
-	void into() throws CQLException {
+	public void into() throws CQLException {
 		simpleToken(TokenType.INTO, lexicalParser.&isInto);
 	}
 
 	// <VALUES> ::= u(VALUES)
 	@Test
-	void values() throws CQLException {
+	public void values() throws CQLException {
 		simpleToken(TokenType.VALUES, lexicalParser.&isValues);
 	}
 
@@ -404,7 +404,7 @@ class LexicalParserTest {
 	// BLOCK> | ( [<SYMBOL>] [<SPACES>] [<LITERAL>] )[<SPACES>] )
 	// [[<SPACES>]<OTHER COMMAND>]
 	@Test
-	void otherCommand() throws CQLException {
+	public void otherCommand() throws CQLException {
 		// reserved word, space but not selector item, symbol , literal or other
 		// command
 		String cql = "'test' ";
@@ -438,7 +438,7 @@ class LexicalParserTest {
 	// <START DELETE COMMAND> ::= <DELETE> <SPACES> [<FROM> <SPACES>] <TABLE
 	// NAME>
 	@Test
-	void startDeleteCommand() throws CQLException {
+	public void startDeleteCommand() throws CQLException {
 
 		String cql = "'test' ";
 		Token token = lexicalParser.isStartDeleteCommand(cql, false);
@@ -472,7 +472,7 @@ class LexicalParserTest {
 
 	// <DELETE COMMAND>::=<START DELETE COMMAND> [<SPACES> <END COMMON COMMAND>]
 	@Test
-	void deleteCommand() throws CQLException {
+	public void deleteCommand() throws CQLException {
 
 		String cql = "'test' ";
 		Token token = lexicalParser.isDeleteCommand(cql, false);
@@ -502,7 +502,7 @@ class LexicalParserTest {
 
 	// <UPDATE COMMAND>::=<START UPDATE COMMAND> <SPACES> <END COMMON COMMAND>
 	@Test
-	void updateCommand() throws CQLException {
+	public void updateCommand() throws CQLException {
 
 		String cql = "'test' ";
 		Token token = lexicalParser.isUpdateCommand(cql, false);
@@ -557,7 +557,7 @@ class LexicalParserTest {
 
 	// <START UPDATE COMMAND> ::= <UPDATE> <SPACES> <TABLE NAME> <SPACES> <SET>
 	@Test
-	void startUpdateCommand() throws CQLException {
+	public void startUpdateCommand() throws CQLException {
 
 		String cql = "'test' ";
 		Token token = lexicalParser.isStartUpdateCommand(cql, false);
@@ -587,7 +587,7 @@ class LexicalParserTest {
 	// <END COMMON COMMAND>::= (<SELECTOR BLOCK> | <SYMBOL> | <LITERAL> )
 	// [[<SPACES>]<END COMMON COMMAND>]]
 	@Test
-	void endCommonCommand() throws CQLException {
+	public void endCommonCommand() throws CQLException {
 		// reserved word, space but not selector item, symbol , literal or other
 		// command
 		String cql = "'test' ";
@@ -616,7 +616,7 @@ class LexicalParserTest {
 	// <ENTITY NAME> ::= ^<RESERVED WORD> (<ITEM NAME CASE SENSITIVE> | <ITEM
 	// NAME CASE INSENSITIVE>)
 	@Test
-	void entityName() throws CQLException {
+	public void entityName() throws CQLException {
 		String cql = " \"1234abcde\" adsfasdf ";
 		Token token = lexicalParser.isEntityName(cql, false);
 		Assert.assertNull(token);
@@ -654,7 +654,7 @@ class LexicalParserTest {
 
 	// <DROP COMMAND> ::= <DROP><SPACES><RESERVED WORD><SPACES><ENTITY NAME>
 	@Test
-	void dropCommand() throws CQLException {
+	public void dropCommand() throws CQLException {
 		// reserved word, space but not selector item, symbol , literal or other
 		// command
 		String cql = "select ";
@@ -677,7 +677,7 @@ class LexicalParserTest {
 	}
 
 	@Test
-	void insertCommand() throws CQLException {
+	public void insertCommand() throws CQLException {
 		// reserved word, space but not selector item, symbol , literal or other
 		// command
 		String cql = "select ";
@@ -721,7 +721,7 @@ class LexicalParserTest {
 
 	// <CREATE COMMAND> ::= <CREATE TABLE COMMAND> | <CREATE INDEX COMMAND>
 	@Test
-	void createCommand() throws CQLException {
+	public void createCommand() throws CQLException {
 		// reserved word, space but not selector item, symbol , literal or other
 		// command
 		String cql = "select ";
@@ -777,7 +777,7 @@ class LexicalParserTest {
 	// <CREATE INDEX COMMAND> ::= <START CREATE INDEX COMMAND> <END CREATE INDEX
 	// COMMAND>
 	@Test
-	void createIndexCommand() throws CQLException {
+	public void createIndexCommand() throws CQLException {
 		// reserved word, space but not selector item, symbol , literal or other
 		// command
 		String cql = "select ";
@@ -818,7 +818,7 @@ class LexicalParserTest {
 
 	// <CREATE TABLE COMMAND> ::= <START CREATE TABLE> <END CREATE TABLE>
 	@Test
-	void createTableCommand() throws CQLException {
+	public void createTableCommand() throws CQLException {
 		// reserved word, space but not selector item, symbol , literal or other
 		// command
 		String cql = "select ";
@@ -860,7 +860,7 @@ class LexicalParserTest {
 	// <CONDITIONAL COMMAND> ::= (<DELETE COMMAND> | <UPDATE COMMAND> | <OTHER
 	// COMMAND>) [ <SPACES> <CONDITION> ]
 	@Test
-	void conidtionalCommand() throws CQLException {
+	public void conidtionalCommand() throws CQLException {
 
 		// start symbol
 		String cql = ". teste";
@@ -917,7 +917,7 @@ class LexicalParserTest {
 	// <COMMAND>::=<CREATE COMMAND> | <DROP COMMAND> | <INSERT COMMAND> |
 	// <CONDITIONAL COMMAND> [<SPACES> (<LIMIT OPTION> | <ALLOW PARAMETER>)]
 	@Test
-	void command() throws CQLException {
+	public void command() throws CQLException {
 
 		// start symbol
 		String cql = ". teste";
@@ -1121,49 +1121,49 @@ class LexicalParserTest {
 
 	// <CREATE> :: = u(CREATE)
 	@Test
-	void create() throws CQLException {
+	public void create() throws CQLException {
 		simpleToken(TokenType.CREATE, lexicalParser.&isCreate);
 	}
 
 	// <FROM>::=u(FROM)
 	@Test
-	void from() throws CQLException {
+	public void from() throws CQLException {
 		simpleToken(TokenType.FROM, lexicalParser.&isFrom);
 	}
 
 	// <SET>::=u(SET)
 	@Test
-	void set() throws CQLException {
+	public void set() throws CQLException {
 		simpleToken(TokenType.SET, lexicalParser.&isSet);
 	}
 
 	// <UPDATE>::=u(UPDATE)
 	@Test
-	void update() throws CQLException {
+	public void update() throws CQLException {
 		simpleToken(TokenType.UPDATE, lexicalParser.&isUpdate);
 	}
 
 	// <DELETE>::=u(DELETE)
 	@Test
-	void delete() throws CQLException {
+	public void delete() throws CQLException {
 		simpleToken(TokenType.DELETE, lexicalParser.&isDelete);
 	}
 
 	// <INDEX> ::= u(INDEX)
 	@Test
-	void index() throws CQLException {
+	public void index() throws CQLException {
 		simpleToken(TokenType.INDEX, lexicalParser.&isIndex);
 	}
 
 	// <TABLE> :: = u(TABLE)
 	@Test
-	void table() throws CQLException {
+	public void table() throws CQLException {
 		simpleToken(TokenType.TABLE, lexicalParser.&isTable);
 	}
 
 	// <DOT COMMA> :: = ;
 	@Test
-	void dotComma() throws CQLException {
+	public void dotComma() throws CQLException {
 		String cql = "   WHERE    X=3 AND X=5   ;";
 		Token token = lexicalParser.isDotComma(cql, false);
 		Assert.assertNull(token);
@@ -1180,7 +1180,7 @@ class LexicalParserTest {
 
 	// <START CREATE INDEX COMMAND> ::= <CREATE> <SPACES> <INDEX>
 	@Test
-	void startCreateIndexCommand() throws CQLException {
+	public void startCreateIndexCommand() throws CQLException {
 		doubleSimpleTest(TokenType.CREATE, TokenType.INDEX, \
 				TokenType.START_CREATE_INDEX_COMMAND, \
 				lexicalParser.&isStartCreateIndexCommand);
@@ -1189,7 +1189,7 @@ class LexicalParserTest {
 
 	// <START CREATE TABLE> ::= <CREATE> <SPACES> <TABLE>
 	@Test
-	void startCreateTable() throws CQLException {
+	public void startCreateTable() throws CQLException {
 		doubleSimpleTest(TokenType.CREATE, TokenType.TABLE,
 				TokenType.START_CREATE_TABLE, lexicalParser.&isStartCreateTable);
 	}
@@ -1222,7 +1222,7 @@ class LexicalParserTest {
 
 	// <END CREATE TABLE>::=^<DOT COMMA> <ANY> [<END CREATE TABLE>]
 	@Test
-	void endCreateTable() throws CQLException {
+	public void endCreateTable() throws CQLException {
 		String cql = ";   WHERE    X=3 AND X=5   ;";
 		Token token = lexicalParser.isEndCreateTable(cql, false);
 		Assert.assertNull(token);
@@ -1243,7 +1243,7 @@ class LexicalParserTest {
 	// <END CREATE INDEX COMMAND>::=^<DOT COMMA> <ANY> [<END CREATE INDEX
 	// COMMAND>]
 	@Test
-	void endCreateIndexCommand() throws CQLException {
+	public void endCreateIndexCommand() throws CQLException {
 		String cql = ";   WHERE    X=3 AND X=5   ;";
 		Token token = lexicalParser.isEndCreateIndexCommand(cql, false);
 		Assert.assertNull(token);
@@ -1267,7 +1267,7 @@ class LexicalParserTest {
 	 * <CONDITION>::=<WHERE><SPACES><CONDITIONS>
 	 */
 	@Test
-	void condition() throws CQLException {
+	public void condition() throws CQLException {
 		String cql = "   WHERE    X=3 AND X=5   ";
 		Assert.assertNull(lexicalParser.isCondition(cql, false));
 		cql = "WHEREX=3 AND X=5 test";
@@ -1324,7 +1324,7 @@ class LexicalParserTest {
 	 * <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR SYMBOL>[<SPACES>]<SELECTOR ITEM>
 	 */
 	@Test
-	void conditionItem() throws CQLException {
+	public void conditionItem() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isConditionItem(cql, false));
 
@@ -1423,7 +1423,7 @@ class LexicalParserTest {
 	 * <CONDITIONS>]
 	 */
 	@Test
-	void conditions() throws CQLException {
+	public void conditions() throws CQLException {
 		String cql = "X3 AND  X=5";
 		Token token = lexicalParser.isConditions(cql, false);
 		Assert.assertNull(token);
@@ -1474,7 +1474,7 @@ class LexicalParserTest {
 	}
 
 	@Test
-	void replace() throws CQLException, ParseException {
+	public void replace() throws CQLException, ParseException {
 
 		String cql = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES (?,?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
 
@@ -1527,10 +1527,12 @@ class LexicalParserTest {
 
 	}
 
+	//	String sql = "UPDATE accounts  USING TTL 100 set token = ? WHERE id = ?";
+
 	// <CQL>::= [<SPACES>] <COMMAND> [ <SPACES>] [<USING>] [<DOT COMMA>
 	// [<SPACES>]]
 	@Test
-	void cql() throws CQLException, ParseException {
+	public void cql() throws CQLException, ParseException {
 		String cql = "select count(*) as valid from accounts where user_token = ?";
 		Token cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
@@ -1632,7 +1634,7 @@ class LexicalParserTest {
 
 	// <USING OPTION>::=<START USING> <SPACES> <END USING>
 	@Test
-	void usingOption() throws CQLException {
+	public void usingOption() throws CQLException {
 
 		// right
 		String cql = "xusing ttl 33 test";
@@ -1666,7 +1668,7 @@ class LexicalParserTest {
 
 	// <START USING> ::= <USING>
 	@Test
-	void startUsing() throws CQLException {
+	public void startUsing() throws CQLException {
 
 		// right
 		String cql = ")";
@@ -1715,20 +1717,20 @@ class LexicalParserTest {
 
 	// <USING>::=u(USING)
 	@Test
-	void using() throws CQLException {
+	public void using() throws CQLException {
 		simpleToken(TokenType.USING, lexicalParser.&isUsing);
 
 	}
 
 	// <TTL> ::= u("TTL")
 	@Test
-	void ttl() throws CQLException {
+	public void ttl() throws CQLException {
 		simpleToken(TokenType.TTL, lexicalParser.&isTTL);
 	}
 
 	// <TTL PARAMETER>::=<TTL> <SPACES> (<NUMBER> | <INJECT> )
 	@Test
-	void ttlParameter() throws CQLException {
+	public void ttlParameter() throws CQLException {
 
 		// right
 		String cql = ")";
@@ -1760,7 +1762,7 @@ class LexicalParserTest {
 
 	// <END_PARAMETERS>::=)
 	@Test
-	void endParameters() throws CQLException {
+	public void endParameters() throws CQLException {
 
 		// right
 		String cql = ")";
@@ -1790,7 +1792,7 @@ class LexicalParserTest {
 
 	// <END BRACKET>::=)
 	@Test
-	void endArray() throws CQLException {
+	public void endArray() throws CQLException {
 		String cql = "]";
 		Token token = lexicalParser.isEndBracket(cql, true);
 		Assert.assertNotNull(token);
@@ -1818,7 +1820,7 @@ class LexicalParserTest {
 
 	// <END MAP>::=}
 	@Test
-	void endMap() throws CQLException {
+	public void endMap() throws CQLException {
 		String cql = "}";
 		Token token = lexicalParser.isEndBrace(cql, true);
 		Assert.assertNotNull(token);
@@ -1842,7 +1844,7 @@ class LexicalParserTest {
 	// NAME>[<SPACES>]<START_PARAMETERS>[<SPACES>][<SELECTOR
 	// BLOCK>][<SPACES>]<END_PARAMETERS>
 	@Test
-	void function() throws CQLException {
+	public void function() throws CQLException {
 		String cql = "count(*) ";
 		Token token = lexicalParser.isFunction(cql, false);
 		token = lexicalParser.isFunction(cql, true);
@@ -1861,7 +1863,7 @@ class LexicalParserTest {
 
 	@Test
 	// <SIGN>::=+|-
-	void sign() throws CQLException {
+	public void sign() throws CQLException {
 		String cql = " +";
 		Token token = lexicalParser.isSign(cql, false);
 		Assert.assertNull(token);
@@ -1880,7 +1882,7 @@ class LexicalParserTest {
 
 	// <END USING>::=<TTL PARAMETER>
 	@Test
-	void endUsing() throws CQLException {
+	public void endUsing() throws CQLException {
 
 		// right
 		String cql = ")";
@@ -1929,7 +1931,7 @@ class LexicalParserTest {
 
 	@Test
 	// <ABSOLUTE HEX>::= (<HEXA CHAR>|<DIGIT>) [<ABSOLUTE HEX>]
-	void absoluteHexa() throws CQLException {
+	public void absoluteHexa() throws CQLException {
 		String cql = " 0x1234abcde adsfasdf ";
 		Token token = lexicalParser.isAbsoluteHexa(cql, false);
 		Assert.assertNull(token);
@@ -1961,7 +1963,7 @@ class LexicalParserTest {
 
 	@Test
 	// <HEXA CHAR> :: = u(a-f)
-	void hexaChar() throws CQLException {
+	public void hexaChar() throws CQLException {
 		String cql = " abcde134 adsfasdf ";
 		Token token = lexicalParser.isHexaChar(cql, false);
 		Assert.assertNull(token);
@@ -1991,7 +1993,7 @@ class LexicalParserTest {
 
 	@Test
 	// <START HEX> ::= u(0X)
-	void startHexa() throws CQLException {
+	public void startHexa() throws CQLException {
 		String cql = "e1234abc-de adsfasdf ";
 		Token token = lexicalParser.isStartHexa(cql, false);
 		Assert.assertNull(token);
@@ -2017,7 +2019,7 @@ class LexicalParserTest {
 
 	@Test
 	// <HEXA>::= [<SIGN>] <START HEX> <ABSOLUTE HEX>
-	void hexa() throws CQLException {
+	public void hexa() throws CQLException {
 		String cql = " 0x1234abcde adsfasdf ";
 		Token token = lexicalParser.isHexa(cql, false);
 		Assert.assertNull(token);
@@ -2101,7 +2103,7 @@ class LexicalParserTest {
 	 * <INJECT> ::= ?
 	 */
 	@Test
-	void inject() throws CQLException {
+	public void inject() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isInject(cql, false));
 
@@ -2131,7 +2133,7 @@ class LexicalParserTest {
 	 * (^<SINGLE QUOTED><ANY>))[<INPUT CHARACTER EXCEPT SINGLE>]
 	 */
 	@Test
-	void inputCharacterExeptSingle() throws CQLException {
+	public void inputCharacterExeptSingle() throws CQLException {
 		String cql = ". ";
 		Token token = lexicalParser.isInputCharacterExceptSingle(cql, true);
 		token = lexicalParser.isInputCharacterExceptSingle(cql, false);
@@ -2216,7 +2218,7 @@ class LexicalParserTest {
 	 * (^<DOUBLE QUOTED><ANY>))[<INPUT CHARACTER EXCEPT DOUBLE>]
 	 */
 	@Test
-	void inputCharacterExeptDouble() throws CQLException {
+	public void inputCharacterExeptDouble() throws CQLException {
 		String cql = ". teste";
 		Token token = lexicalParser.isInputCharacterExceptDouble(cql, true);
 		token = lexicalParser.isInputCharacterExceptDouble(cql, false);
@@ -2288,7 +2290,7 @@ class LexicalParserTest {
 	// <ITEM NAME> ::= <ITEM NAME CASE SENSITIVE> | <ITEM NAME CASE INSENSITIVE>
 	// | <ASTERISK>
 	@Test
-	void itemName() throws CQLException {
+	public void itemName() throws CQLException {
 		String cql = " \"1234abcde\" adsfasdf ";
 		Token token = lexicalParser.isItemName(cql, false);
 		Assert.assertNull(token);
@@ -2335,7 +2337,7 @@ class LexicalParserTest {
 
 	// <ITEM NAME CASE INSENSITIVE> ::= ^<NUMBER> <CHARS>
 	@Test
-	void itemNameCaseInsensitive() throws CQLException {
+	public void itemNameCaseInsensitive() throws CQLException {
 		String cql = "1234abcde adsfasdf ";
 		Token token = lexicalParser.isItemNameCaseInsensitive(cql, false);
 		Assert.assertNull(token);
@@ -2379,7 +2381,7 @@ class LexicalParserTest {
 
 	// <ITEM NAME CASE SENSITIVE>::= <DOUBLE QUOTED><CHARS><DOUBLE QUOTED>
 	@Test
-	void itemNameCaseSensitive() throws CQLException {
+	public void itemNameCaseSensitive() throws CQLException {
 		String cql = " \"1234abcde\" adsfasdf ";
 		Token token = lexicalParser.isItemNameCaseSensitive(cql, false);
 		Assert.assertNull(token);
@@ -2430,7 +2432,7 @@ class LexicalParserTest {
 	 * <LITERAL> ::= <NUMBER> | <STRING> | <BOOLEAN> | <HEXA> 
 	 */
 	@Test
-	void literal() throws CQLException {
+	public void literal() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isLiteral(cql, false));
 
@@ -2505,7 +2507,7 @@ class LexicalParserTest {
 
 	// <NUMBER> ::= <DIGIT>[<NUMBER>]
 	@Test
-	void number() throws CQLException {
+	public void number() throws CQLException {
 		String cql = " 1234abcde adsfasdf ";
 		Token token = lexicalParser.isNumber(cql, false);
 		Assert.assertNull(token);
@@ -2526,7 +2528,7 @@ class LexicalParserTest {
 
 	// <DIGIT> ::= (0-9)
 	@Test
-	void digit() throws CQLException {
+	public void digit() throws CQLException {
 		String cql = "é1234Éabcde adsfasdf ";
 		Token token = lexicalParser.isDigit(cql, false);
 		Assert.assertNull(token);
@@ -2547,7 +2549,7 @@ class LexicalParserTest {
 
 	// <OR> ::= u(OR)
 	@Test
-	void or() throws CQLException {
+	public void or() throws CQLException {
 		simpleToken(TokenType.OR, lexicalParser.&isOr);
 
 	}
@@ -2555,21 +2557,21 @@ class LexicalParserTest {
 
 	// <TRUE> ::= u(TRUE)
 	@Test
-	void trueTest() throws CQLException {
+	public void trueTest() throws CQLException {
 		simpleToken(TokenType.TRUE, lexicalParser.&isTrue);
 
 	}
 
 	// <FALSE> ::= u(FALSE)
 	@Test
-	void falseTest() throws CQLException {
+	public void falseTest() throws CQLException {
 		simpleToken(TokenType.FALSE, lexicalParser.&isFalse);
 
 	}
 
 	// <BOOLEAN> ::= <FALSE> | <TRUE>
 	@Test
-	void booleanTest() throws CQLException {
+	public void booleanTest() throws CQLException {
 		String cql = "t2ue";
 		Token token = lexicalParser.isBoolean(cql, false);
 		Assert.assertNull(token);
@@ -2597,7 +2599,7 @@ class LexicalParserTest {
 	}
 
 	@Test
-	void reservedWord() throws CQLException {
+	public void reservedWord() throws CQLException {
 		String cql = " SELECT ";
 		Token token = lexicalParser.isReservedWord(cql, false);
 		Assert.assertNull(token);
@@ -2619,7 +2621,7 @@ class LexicalParserTest {
 	}
 
 	@Test
-	void reservedWords() throws CQLException {
+	public void reservedWords() throws CQLException {
 		String cql = "abcd";
 		Token token = lexicalParser.isReservedWords(cql, false);
 		Assert.assertNull(token);
@@ -2691,7 +2693,7 @@ class LexicalParserTest {
 	}
 
 	@Test
-	void reservedWordsIgnoreDoubleSpaces() throws CQLException {
+	public void reservedWordsIgnoreDoubleSpaces() throws CQLException {
 		String cql = "abcd";
 		Token token = lexicalParser.isReservedWords(cql, false);
 		Assert.assertNull(token);
@@ -2765,7 +2767,7 @@ class LexicalParserTest {
 	// <SELECTOR BLOCK> ::= <FIELD VALUE> [[<SPACES>] <COMMA> [<SPACES>]
 	// <SELECTOR BLOCK>]
 	@Test
-	void selectorBlock() throws CQLException {
+	public void selectorBlock() throws CQLException {
 		String cql = "SELECT   test   ";
 		Assert.assertNull(lexicalParser.isSelectorBlock(cql, false));
 
@@ -2842,7 +2844,7 @@ class LexicalParserTest {
 	 * <SELECTOR ITEM>::= <SELECTOR ITEM STRICT> [<SPACES><ALIAS>]
 	 */
 	@Test
-	void selectorItem() throws CQLException {
+	public void selectorItem() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isSelectorItem(cql, false));
 
@@ -2960,7 +2962,7 @@ class LexicalParserTest {
 
 	// <FIELD VALUE> ::= <FUNCTION> | <ARRAY> | <MAP> | <LITERAL> | <FIELD NAME>
 	@Test
-	void fieldValue() throws CQLException {
+	public void fieldValue() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isFieldValue(cql, false));
 
@@ -3090,7 +3092,7 @@ class LexicalParserTest {
 	// <FIELD LIST> ::= <FIELD NAME> [[<SPACES>] <COMMA> [<SPACES>] <FIELD
 	// LIST>]
 	@Test
-	void fieldList() throws CQLException {
+	public void fieldList() throws CQLException {
 		String cql = ". test";
 		Assert.assertNull(lexicalParser.isFieldList(cql, false));
 
@@ -3113,7 +3115,7 @@ class LexicalParserTest {
 
 	// <SELECTOR ITEM STRICT> ::= ^<RESERVED WORD> <FIELD VALUE>
 	@Test
-	void selectorItemStrict() throws CQLException {
+	public void selectorItemStrict() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isSelectorItemStrict(cql, false));
 
@@ -3232,7 +3234,7 @@ class LexicalParserTest {
 	// <ARRAY BRACE> ::= <START BRACE>[<SPACES>][<SELECTOR BLOCK>][<SPACES>]<END
 	// BRACE>
 	@Test
-	void arrayBrace() throws CQLException {
+	public void arrayBrace() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isArrayBrace(cql, false));
 
@@ -3273,7 +3275,7 @@ class LexicalParserTest {
 	 * <MAP> ::= <START MAP>[<SPACES>][<PROPERTIES>][<SPACES>]<END MAP>
 	 */
 	@Test
-	void map() throws CQLException {
+	public void map() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isMap(cql, false));
 
@@ -3314,7 +3316,7 @@ class LexicalParserTest {
 	 * <PROPERTIES> ::= <PROPERTY> [[<SPACES>]<COMMA>[<SPACES>] <PROPERTIES>]
 	 */
 	@Test
-	void properties() throws CQLException {
+	public void properties() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isProperties(cql, false));
 
@@ -3365,7 +3367,7 @@ class LexicalParserTest {
 	 * <PROPERTY> ::= <KEY>[<SPACES>]<DOUBLE DOT>[<SPACES>]<LITERAL>
 	 */
 	@Test
-	void property() throws CQLException {
+	public void property() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isProperty(cql, false));
 
@@ -3422,7 +3424,7 @@ class LexicalParserTest {
 	 * <KEY> ::= <CHARS>|<LITERAL>
 	 */
 	@Test
-	void key() throws CQLException {
+	public void key() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isKey(cql, false));
 
@@ -3459,7 +3461,7 @@ class LexicalParserTest {
 	 * <ARRAY>::= <ARRAY BRACKET> | <ARRAY BRACE>
 	 */
 	@Test
-	void array() throws CQLException {
+	public void array() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isArray(cql, false));
 
@@ -3531,7 +3533,7 @@ class LexicalParserTest {
 	 * BLOCK>][<SPACES>]<END BRACKET>
 	 */
 	@Test
-	void arrayBracket() throws CQLException {
+	public void arrayBracket() throws CQLException {
 		String cql = ". teste";
 		Token token = lexicalParser.isArrayBracket(cql, false);
 		Assert.assertNull(token);
@@ -3571,7 +3573,7 @@ class LexicalParserTest {
 
 	// <SINGLE QUOTED> ::= '
 	@Test
-	void singleQuoted() throws CQLException {
+	public void singleQuoted() throws CQLException {
 		String cql = "'";
 		Token token = lexicalParser.isSingleQuoted(cql, true);
 		Assert.assertNotNull(token);
@@ -3595,7 +3597,7 @@ class LexicalParserTest {
 	}
 
 	@Test
-	void spaces() throws CQLException {
+	public void spaces() throws CQLException {
 		String cql = " x";
 		Token token = lexicalParser.isSpaces(cql, false);
 		Assert.assertNotNull(token);
@@ -3631,7 +3633,7 @@ class LexicalParserTest {
 
 	// <CHARS> ::= ^<EMPTY>[<CHARS>](a-Z0-9_)
 	@Test
-	void chars() throws CQLException {
+	public void chars() throws CQLException {
 		String cql = "afasdf";
 		Token token = lexicalParser.isChars(cql, true);
 		Assert.assertNotNull(token);
@@ -3679,7 +3681,7 @@ class LexicalParserTest {
 
 	// <START_PARAMETERS>::=(
 	@Test
-	void startParameters() throws CQLException {
+	public void startParameters() throws CQLException {
 		String cql = "(";
 		Token token = lexicalParser.isStartParameters(cql, true);
 		Assert.assertNotNull(token);
@@ -3704,7 +3706,7 @@ class LexicalParserTest {
 
 	// <START BRACKET>::=(
 	@Test
-	void startBracket() throws CQLException {
+	public void startBracket() throws CQLException {
 		String cql = "[";
 		Token token = lexicalParser.isStartBracket(cql, true);
 		Assert.assertNotNull(token);
@@ -3729,7 +3731,7 @@ class LexicalParserTest {
 
 	// <START BRACE>::={
 	@Test
-	void startBrace() throws CQLException {
+	public void startBrace() throws CQLException {
 		String cql = "{";
 		Token token = lexicalParser.isStartBrace(cql, true);
 		Assert.assertNotNull(token);
@@ -3758,7 +3760,7 @@ class LexicalParserTest {
 	 * QUOTED>)
 	 */
 	@Test
-	void string() throws CQLException {
+	public void string() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isString(cql, false));
 
@@ -3828,7 +3830,7 @@ class LexicalParserTest {
 
 	// <LIMIT OPTION> ::= <LIMIT> <SPACES> (<NUMBER>|<INJECTION>)
 	@Test
-	void limitOption() throws CQLException {
+	public void limitOption() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isLimitOption(cql, false));
 
@@ -3882,7 +3884,7 @@ class LexicalParserTest {
 
 	// <OPTIONAL PAIR SIMBOL> ::= <SYMBOL>[<SYMBOL>]
 	@Test
-	void optionalPairSymbol() throws CQLException {
+	public void optionalPairSymbol() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isOptionalPairSymbol(cql, false));
 
@@ -3970,7 +3972,7 @@ class LexicalParserTest {
 
 	// <SYMBOL> ::= = | < | > | ! | + | - | / | * | ( | ) | { | } | , [ | ]
 	@Test
-	void symbol() throws CQLException {
+	public void symbol() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isSymbol(cql, false));
 
@@ -4035,25 +4037,25 @@ class LexicalParserTest {
 
 	// <DROP> ::= u(DROP)
 	@Test
-	void drop() throws CQLException {
+	public void drop() throws CQLException {
 		simpleToken(TokenType.DROP, lexicalParser.&isDrop);
 	}
 
 	// <WHERE> ::= u(WHERE)
 	@Test
-	void where() throws CQLException {
+	public void where() throws CQLException {
 		simpleToken(TokenType.WHERE, lexicalParser.&isWhere);
 	}
 
 	// <LIMIT> ::= u(LIMIT)
 	@Test
-	void limit() throws CQLException {
+	public void limit() throws CQLException {
 		simpleToken(TokenType.LIMIT, lexicalParser.&isLimit);
 	}
 
 	// <ALLOW PARAMETER>::=<ALLOW PARAMETER> ::= <ALLOW><SPACES><FILTERING>
 	@Test
-	void allowParameter() throws CQLException {
+	public void allowParameter() throws CQLException {
 		String cql = ". teste";
 		Assert.assertNull(lexicalParser.isAllowParameter(cql, false));
 
@@ -4098,17 +4100,17 @@ class LexicalParserTest {
 
 	// <ALLOW>::=u(ALLOW)
 	@Test
-	void allow() throws CQLException {
+	public void allow() throws CQLException {
 		simpleToken(TokenType.ALLOW, lexicalParser.&isAllow);
 	}
 
 	// <FILTERING>::=u(FILTERING)
 	@Test
-	void filtering() throws CQLException {
+	public void filtering() throws CQLException {
 		simpleToken(TokenType.FILTERING, lexicalParser.&isFiltering);
 	}
 
-	private void simpleToken(TokenType type, LexicalTester tester)
+	private   void simpleToken(TokenType type, LexicalTester tester)
 	throws CQLException {
 		String name = type.getName();
 		String uname = name.toUpperCase();

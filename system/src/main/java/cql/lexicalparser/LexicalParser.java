@@ -554,7 +554,7 @@ public class LexicalParser {
 
 	// <CONDITION>::=<WHERE><SPACES><CONDITIONS>
 	public Token isCondition(String text, boolean required) throws LexicalParserException {
-		return isDoubleTokensSpaceded(text, required, TokenType.CONDITION, this::isWhere, this::isConditions);
+		return isDoubleTokensSpaced(text, required, TokenType.CONDITION, this::isWhere, this::isConditions);
 	}
 
 	// <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR
@@ -2243,11 +2243,11 @@ public class LexicalParser {
 
 	// <ALLOW PARAMETER> ::= <ALLOW><SPACES><FILTERING>
 	public Token isAllowParameter(String text, boolean required) throws LexicalParserException {
-		return isDoubleTokensSpaceded(text, required, TokenType.ALLOW_PARAMETER, this::isAllow, this::isFiltering);
+		return isDoubleTokensSpaced(text, required, TokenType.ALLOW_PARAMETER, this::isAllow, this::isFiltering);
 	}
 
 	// <X> ::= <A> <SPACES> <B>
-	public Token isDoubleTokensSpaceded(String text, boolean required, TokenType type, LexicalTester testerA,
+	public Token isDoubleTokensSpaced(String text, boolean required, TokenType type, LexicalTester testerA,
 			LexicalTester testerB) throws LexicalParserException {
 
 		Token token = new Token(type, this.timeZoneGMT);
@@ -2297,7 +2297,7 @@ public class LexicalParser {
 
 	// <START CREATE TABLE> ::= <CREATE> <SPACES> <TABLE>
 	public Token isStartCreateTable(String text, boolean required) throws LexicalParserException {
-		return isDoubleTokensSpaceded(text, required, TokenType.START_CREATE_TABLE, this::isCreate, this::isTable);
+		return isDoubleTokensSpaced(text, required, TokenType.START_CREATE_TABLE, this::isCreate, this::isTable);
 
 	}
 
@@ -2564,7 +2564,7 @@ public class LexicalParser {
 
 	// <USING OPTION>::=<START USING> <SPACES> <END USING>
 	public Token isUsingOption(String text, boolean required) throws LexicalParserException {
-		return isDoubleTokensSpaceded(text, required, TokenType.USING_OPTION, this::isStartUsing, this::isEndUsing);
+		return isDoubleTokensSpaced(text, required, TokenType.USING_OPTION, this::isStartUsing, this::isEndUsing);
 
 	}
 
@@ -2619,7 +2619,7 @@ public class LexicalParser {
 
 	// <START CREATE INDEX COMMAND> ::= <CREATE> <SPACES> <INDEX>
 	public Token isStartCreateIndexCommand(String text, boolean required) throws LexicalParserException {
-		return isDoubleTokensSpaceded(text, required, TokenType.START_CREATE_INDEX_COMMAND, this::isCreate,
+		return isDoubleTokensSpaced(text, required, TokenType.START_CREATE_INDEX_COMMAND, this::isCreate,
 				this::isIndex);
 
 	}
@@ -2786,6 +2786,7 @@ public class LexicalParser {
 
 	// <SET>::=u(SET)
 	public Token isSet(String text, boolean required) throws LexicalParserException {
+
 		Token token = new Token(TokenType.SET, this.timeZoneGMT);
 
 		if (!text.toUpperCase().startsWith("SET")) {
@@ -2798,6 +2799,47 @@ public class LexicalParser {
 
 		token.setContent(text.substring(0, 3));
 		token.setPosContent(text.substring(3));
+		return token;
+	}
+
+	// <SET COMMAND>::=[<USING OPTION><SPACES>] <SET>
+	public Token isSetCommand(String text, boolean required) throws LexicalParserException {
+		Token leftToken = null;
+		Token token = new Token(TokenType.SET_COMMAND, this.timeZoneGMT);
+
+		Token using = isUsingOption(text, false);
+
+		if (using != null) {
+			Token space = isSpaces(using.getPosContent(), required);
+			if (space == null) {
+				return null;
+			}
+
+			updateNeighbors(leftToken, using);
+			leftToken = using;
+			token.getSubTokens().add(leftToken);
+			updateNeighbors(leftToken, space);
+			leftToken = space;
+			token.getSubTokens().add(leftToken);
+
+		}
+
+		String postContent = (leftToken == null) ? text : leftToken.getPosContent();
+
+		Token set = isSet(postContent, required);
+
+		if (set == null) {
+			return null;
+		}
+
+		updateNeighbors(leftToken, set);
+		leftToken = set;
+		token.getSubTokens().add(leftToken);
+
+		String content = text.substring(0, text.length() - leftToken.getPosContent().length());
+
+		token.setContent(content);
+		token.setPosContent(leftToken.getPosContent());
 		return token;
 	}
 
@@ -2911,7 +2953,7 @@ public class LexicalParser {
 		leftToken = tokenSpaces;
 		token.getSubTokens().add(leftToken);
 
-		Token tokenSet = isSet(leftToken.getPosContent(), required);
+		Token tokenSet = isSetCommand(leftToken.getPosContent(), required);
 		if (tokenSet == null) {
 			return null;
 		}
@@ -3024,7 +3066,7 @@ public class LexicalParser {
 
 	// <UPDATE COMMAND>::=<START UPDATE COMMAND> <SPACES> <END COMMON COMMAND>
 	public Token isUpdateCommand(String text, boolean required) throws LexicalParserException {
-		return isDoubleTokensSpaceded(text, required, TokenType.UPDATE_COMMAND, this::isStartUpdateCommand,
+		return isDoubleTokensSpaced(text, required, TokenType.UPDATE_COMMAND, this::isStartUpdateCommand,
 				this::isEndCommonCommand);
 
 	}

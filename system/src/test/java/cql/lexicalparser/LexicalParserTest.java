@@ -6,19 +6,21 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
-import java.util.function.Consumer
+import java.util.Date;
+import java.util.TimeZone;
 
-import org.junit.*
-import org.junit.runner.RunWith
-import org.junit.runners.JUnit4
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 
 import cql.Token;
 import cql.TokenType;
 import cql.lexicalparser.exceptions.CQLException;
-import junit.framework.Assert
 
 @RunWith(JUnit4.class)
-class LexicalParserTest {
+public class LexicalParserTest {
 
 	private LexicalParser lexicalParser = null;
 
@@ -57,8 +59,8 @@ class LexicalParserTest {
 	// <AND> ::= u(AND)
 	@Test
 	public void and() throws CQLException {
-		LexicalTester l =  lexicalParser.&isAnd;
-		simpleToken(TokenType.AND,l);
+		LexicalTester l = lexicalParser::isAnd;
+		simpleToken(TokenType.AND, l);
 	}
 
 	// <COMA> ::= ,
@@ -82,7 +84,7 @@ class LexicalParserTest {
 	// <INSERT> ::= u(INSERT)
 	@Test
 	public void insert() throws CQLException {
-		simpleToken(TokenType.INSERT, lexicalParser.&isInsert);
+		simpleToken(TokenType.INSERT, lexicalParser::isInsert);
 
 	}
 
@@ -130,7 +132,7 @@ class LexicalParserTest {
 	// <AS> :: = AS
 	@Test
 	public void tokenAs() throws CQLException {
-		simpleToken(TokenType.AS, lexicalParser.&isAs);
+		simpleToken(TokenType.AS, lexicalParser::isAs);
 
 	}
 
@@ -146,8 +148,7 @@ class LexicalParserTest {
 		Assert.assertEquals("clients", token.getContent());
 		Assert.assertEquals(" insert", token.getPosContent());
 		Assert.assertEquals(TokenType.TABLE_NAME, token.getType());
-		Assert.assertEquals(TokenType.ENTITY_NAME, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.ENTITY_NAME, token.getSubTokens().get(0).getType());
 
 		Assert.assertEquals(token.rebuild(), token.getContent());
 
@@ -159,8 +160,7 @@ class LexicalParserTest {
 		Assert.assertEquals(" insert", token.getPosContent());
 		Assert.assertEquals(TokenType.TABLE_NAME, token.getType());
 
-		Assert.assertEquals(TokenType.INJECT, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.INJECT, token.getSubTokens().get(0).getType());
 
 		Assert.assertEquals(token.rebuild(), token.getContent());
 
@@ -391,13 +391,13 @@ class LexicalParserTest {
 	// <INTO> ::= u(INTO)
 	@Test
 	public void into() throws CQLException {
-		simpleToken(TokenType.INTO, lexicalParser.&isInto);
+		simpleToken(TokenType.INTO, lexicalParser::isInto);
 	}
 
 	// <VALUES> ::= u(VALUES)
 	@Test
 	public void values() throws CQLException {
-		simpleToken(TokenType.VALUES, lexicalParser.&isValues);
+		simpleToken(TokenType.VALUES, lexicalParser::isValues);
 	}
 
 	// <OTHER COMMAND> ::= ^<WHERE> <RESERVED WORDS> [<SPACES>] (<SELECTOR
@@ -625,7 +625,7 @@ class LexicalParserTest {
 		token = lexicalParser.isEntityName(cql, false);
 		Assert.assertNull(token);
 
-		cql = "\"1234abcde\$\" adsfasdf ";
+		cql = "\"1234abcde$\" adsfasdf ";
 		token = lexicalParser.isEntityName(cql, false);
 		Assert.assertNull(token);
 
@@ -716,7 +716,6 @@ class LexicalParserTest {
 		token = lexicalParser.isInsertCommand(cql, true);
 		Assert.assertNotNull(token);
 
-
 	}
 
 	// <CREATE COMMAND> ::= <CREATE TABLE COMMAND> | <CREATE INDEX COMMAND>
@@ -767,8 +766,7 @@ class LexicalParserTest {
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
 		Assert.assertEquals(TokenType.CREATE_COMMAND, token.getType());
-		Assert.assertEquals(TokenType.CREATE_INDEX_COMMAND, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.CREATE_INDEX_COMMAND, token.getSubTokens().get(0).getType());
 		Assert.assertEquals("create index tab test ", token.getContent());
 		Assert.assertEquals("; test2", token.getPosContent());
 
@@ -907,8 +905,7 @@ class LexicalParserTest {
 		token = lexicalParser.isConditionalCommand(cql, false);
 
 		Assert.assertNotNull(token);
-		Assert.assertEquals("UPDATE teste set teste.a=? WHERE b = ?",
-				token.getContent());
+		Assert.assertEquals("UPDATE teste set teste.a=? WHERE b = ?", token.getContent());
 		Assert.assertEquals("  ", token.getPosContent());
 		Assert.assertEquals(TokenType.CONDITIONAL_COMMAND, token.getType());
 
@@ -973,9 +970,7 @@ class LexicalParserTest {
 		token = lexicalParser.isCommand(cql, true);
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
-		Assert.assertEquals(
-				"insert tab1 (x,y,z) values (z,n,q) allow filtering",
-				token.getContent());
+		Assert.assertEquals("insert tab1 (x,y,z) values (z,n,q) allow filtering", token.getContent());
 		Assert.assertEquals(token.getPosContent(), " test");
 
 		cql = "select insert";
@@ -1018,8 +1013,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("select ", token.getContent());
-		Assert.assertEquals("insert  accounts.id;select insert  accounts.name",
-				token.getPosContent());
+		Assert.assertEquals("insert  accounts.id;select insert  accounts.name", token.getPosContent());
 		Assert.assertEquals(TokenType.COMMAND, token.getType());
 		token = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.CONDITIONAL_COMMAND, token.getType());
@@ -1032,8 +1026,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("select x where x=y", token.getContent());
-		Assert.assertEquals(";select insert  accounts.name",
-				token.getPosContent());
+		Assert.assertEquals(";select insert  accounts.name", token.getPosContent());
 		Assert.assertEquals(TokenType.COMMAND, token.getType());
 
 		cql = "select insert accounts.id;select insert  accounts.name";
@@ -1043,8 +1036,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("select ", token.getContent());
-		Assert.assertEquals("insert accounts.id;select insert  accounts.name",
-				token.getPosContent());
+		Assert.assertEquals("insert accounts.id;select insert  accounts.name", token.getPosContent());
 		Assert.assertEquals(TokenType.COMMAND, token.getType());
 		token = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.CONDITIONAL_COMMAND, token.getType());
@@ -1060,8 +1052,7 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.COMMAND, token.getType());
 		token = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.CREATE_COMMAND, token.getType());
-		Assert.assertEquals(TokenType.CREATE_TABLE_COMMAND, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.CREATE_TABLE_COMMAND, token.getSubTokens().get(0).getType());
 
 		cql = "drop table x a b c ; test";
 
@@ -1081,8 +1072,7 @@ class LexicalParserTest {
 		token = lexicalParser.isCommand(cql, false);
 
 		Assert.assertNotNull(token);
-		Assert.assertEquals(
-				"select count(*) as valid from accounts where user_token = ? ALLOW FILTERING",
+		Assert.assertEquals("select count(*) as valid from accounts where user_token = ? ALLOW FILTERING",
 				token.getContent());
 		Assert.assertEquals(" test", token.getPosContent());
 		Assert.assertEquals(TokenType.COMMAND, token.getType());
@@ -1095,9 +1085,7 @@ class LexicalParserTest {
 		token = lexicalParser.isCommand(cql, false);
 
 		Assert.assertNotNull(token);
-		Assert.assertEquals(
-				"select count(*) as valid from accounts where user_token = ? limit 5",
-				token.getContent());
+		Assert.assertEquals("select count(*) as valid from accounts where user_token = ? limit 5", token.getContent());
 		Assert.assertEquals(" test", token.getPosContent());
 		Assert.assertEquals(TokenType.COMMAND, token.getType());
 		token = token.getSubTokens().get(0);
@@ -1109,8 +1097,7 @@ class LexicalParserTest {
 		token = lexicalParser.isCommand(cql, false);
 
 		Assert.assertNotNull(token);
-		Assert.assertEquals(
-				"select count(*) as valid from accounts where user_token = ? limit 5 allow filtering",
+		Assert.assertEquals("select count(*) as valid from accounts where user_token = ? limit 5 allow filtering",
 				token.getContent());
 		Assert.assertEquals(" test", token.getPosContent());
 		Assert.assertEquals(TokenType.COMMAND, token.getType());
@@ -1122,43 +1109,72 @@ class LexicalParserTest {
 	// <CREATE> :: = u(CREATE)
 	@Test
 	public void create() throws CQLException {
-		simpleToken(TokenType.CREATE, lexicalParser.&isCreate);
+		simpleToken(TokenType.CREATE, lexicalParser::isCreate);
 	}
 
 	// <FROM>::=u(FROM)
 	@Test
 	public void from() throws CQLException {
-		simpleToken(TokenType.FROM, lexicalParser.&isFrom);
+		simpleToken(TokenType.FROM, lexicalParser::isFrom);
 	}
 
 	// <SET>::=u(SET)
 	@Test
 	public void set() throws CQLException {
-		simpleToken(TokenType.SET, lexicalParser.&isSet);
+		simpleToken(TokenType.SET, lexicalParser::isSet);
+
+		String cql = "SET test";
+		Token token = lexicalParser.isSet(cql, true);
+
+		Assert.assertEquals(token.rebuild(), token.getContent());
+		Assert.assertNotNull(token);
+		Assert.assertEquals("SET", token.getContent());
+		Assert.assertEquals(" test", token.getPosContent());
+		Assert.assertEquals(TokenType.SET, token.getType());
+
+	}
+
+	//  	<SET COMMAND>::=[<USING OPTION><SPACES>] <SET>
+	@Test
+	public void setCommand() throws CQLException { 
+
+		String cql = "USING TTL 300 SET test";
+		Token token = lexicalParser.isSetCommand(cql, true);
+
+		Assert.assertEquals(token.rebuild(), token.getContent());
+		Assert.assertNotNull(token);
+		Assert.assertEquals("USING TTL 300 SET", token.getContent());
+		Assert.assertEquals(" test", token.getPosContent());
+		Assert.assertEquals(TokenType.SET_COMMAND, token.getType());
+		Assert.assertEquals(3, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.USING_OPTION, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.SET, token.getSubTokens().get(2).getType());
+
 	}
 
 	// <UPDATE>::=u(UPDATE)
 	@Test
 	public void update() throws CQLException {
-		simpleToken(TokenType.UPDATE, lexicalParser.&isUpdate);
+		simpleToken(TokenType.UPDATE, lexicalParser::isUpdate);
 	}
 
 	// <DELETE>::=u(DELETE)
 	@Test
 	public void delete() throws CQLException {
-		simpleToken(TokenType.DELETE, lexicalParser.&isDelete);
+		simpleToken(TokenType.DELETE, lexicalParser::isDelete);
 	}
 
 	// <INDEX> ::= u(INDEX)
 	@Test
 	public void index() throws CQLException {
-		simpleToken(TokenType.INDEX, lexicalParser.&isIndex);
+		simpleToken(TokenType.INDEX, lexicalParser::isIndex);
 	}
 
 	// <TABLE> :: = u(TABLE)
 	@Test
 	public void table() throws CQLException {
-		simpleToken(TokenType.TABLE, lexicalParser.&isTable);
+		simpleToken(TokenType.TABLE, lexicalParser::isTable);
 	}
 
 	// <DOT COMMA> :: = ;
@@ -1173,30 +1189,28 @@ class LexicalParserTest {
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
 		Assert.assertEquals(";", token.getContent());
-		Assert.assertEquals("   WHERE    X=3 AND X=5   ; teste",
-				token.getPosContent());
+		Assert.assertEquals("   WHERE    X=3 AND X=5   ; teste", token.getPosContent());
 		Assert.assertEquals(TokenType.DOT_COMMA, token.getType());
 	}
 
 	// <START CREATE INDEX COMMAND> ::= <CREATE> <SPACES> <INDEX>
 	@Test
 	public void startCreateIndexCommand() throws CQLException {
-		doubleSimpleTest(TokenType.CREATE, TokenType.INDEX, \
-				TokenType.START_CREATE_INDEX_COMMAND, \
-				lexicalParser.&isStartCreateIndexCommand);
+		doubleSimpleTest(TokenType.CREATE, TokenType.INDEX, TokenType.START_CREATE_INDEX_COMMAND,
+				lexicalParser::isStartCreateIndexCommand);
 
 	}
 
 	// <START CREATE TABLE> ::= <CREATE> <SPACES> <TABLE>
 	@Test
 	public void startCreateTable() throws CQLException {
-		doubleSimpleTest(TokenType.CREATE, TokenType.TABLE,
-				TokenType.START_CREATE_TABLE, lexicalParser.&isStartCreateTable);
+		doubleSimpleTest(TokenType.CREATE, TokenType.TABLE, TokenType.START_CREATE_TABLE,
+				lexicalParser::isStartCreateTable);
 	}
 
 	// <X> ::= <A><SPACES><B>
-	private void doubleSimpleTest(TokenType a, TokenType b, TokenType result,
-			LexicalTester tester) throws CQLException {
+	private void doubleSimpleTest(TokenType a, TokenType b, TokenType result, LexicalTester tester)
+			throws CQLException {
 		String cql = "WHERE    X=3 AND X=5   ;";
 		Token token = tester.is(cql, false);
 		Assert.assertNull(token);
@@ -1209,14 +1223,12 @@ class LexicalParserTest {
 		token = tester.is(cql, false);
 		Assert.assertNull(token);
 
-		cql = a.getName() + " " + b.getName()  \
-		+ " TAB  WHERE    X=3 AND X=5   ; teste";
+		cql = a.getName() + " " + b.getName() + " TAB  WHERE    X=3 AND X=5   ; teste";
 		token = tester.is(cql, true);
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
 		Assert.assertEquals(a.getName() + " " + b.getName(), token.getContent());
-		Assert.assertEquals(" TAB  WHERE    X=3 AND X=5   ; teste",
-				token.getPosContent());
+		Assert.assertEquals(" TAB  WHERE    X=3 AND X=5   ; teste", token.getPosContent());
 		Assert.assertEquals(result, token.getType());
 	}
 
@@ -1258,8 +1270,7 @@ class LexicalParserTest {
 		Token subtoken = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.ANY, subtoken.getType());
 		subtoken = token.getSubTokens().get(1);
-		Assert.assertEquals(TokenType.END_CREATE_INDEX_COMMAND,
-				subtoken.getType());
+		Assert.assertEquals(TokenType.END_CREATE_INDEX_COMMAND, subtoken.getType());
 
 	}
 
@@ -1285,11 +1296,9 @@ class LexicalParserTest {
 
 		Assert.assertEquals("    ", token.getSubTokens().get(1).getContent());
 
-		Assert.assertEquals("X=3 AND X=5", token.getSubTokens().get(2)
-				.getContent());
+		Assert.assertEquals("X=3 AND X=5", token.getSubTokens().get(2).getContent());
 
-		Assert.assertEquals("X=3", token.getSubTokens().get(2).getSubTokens()
-				.get(0).getContent());
+		Assert.assertEquals("X=3", token.getSubTokens().get(2).getSubTokens().get(0).getContent());
 
 		cql = "WHERE deleteLeft > 0";
 		token = lexicalParser.isCondition(cql, false);
@@ -1299,29 +1308,24 @@ class LexicalParserTest {
 		Assert.assertEquals(token.getType(), TokenType.CONDITION);
 	}
 
-	private boolean hasChield(TokenType type, Token token)
-	{
-		
-		if(token.getType()==type)
-		{
+	private boolean hasChield(TokenType type, Token token) {
+
+		if (token.getType() == type) {
 			return true;
 		}
-		
-		 
-		
-		for(Token child:token.getSubTokens())
-		{
-			if(hasChield(type,child))
-			{
+
+		for (Token child : token.getSubTokens()) {
+			if (hasChield(type, child)) {
 				return true;
 			}
 		}
-		
+
 		return false;
- 	}
+	}
 
 	/**
-	 * <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR SYMBOL>[<SPACES>]<SELECTOR ITEM>
+	 * <CONDITION-ITEM>::= <SELECTOR ITEM>[<SPACES>]<OPTIONAL PAIR
+	 * SYMBOL>[<SPACES>]<SELECTOR ITEM>
 	 */
 	@Test
 	public void conditionItem() throws CQLException {
@@ -1344,9 +1348,6 @@ class LexicalParserTest {
 		Assert.assertEquals("X=3", token.getContent());
 		Assert.assertEquals(" aliasa test", token.getPosContent());
 
-
-
-
 		cql = "key = ? x";
 		token = lexicalParser.isConditionItem(cql, true);
 		Assert.assertNotNull(token);
@@ -1363,7 +1364,6 @@ class LexicalParserTest {
 		Assert.assertEquals("key <= ?", token.getContent());
 		Assert.assertEquals(" x", token.getPosContent());
 
-
 		cql = "accounts.id=true ";
 		token = lexicalParser.isConditionItem(cql, true);
 		Assert.assertEquals(token.rebuild(), token.getContent());
@@ -1371,13 +1371,10 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("accounts.id=true", token.getContent());
-		
-		
-		assert " " ==  token.getPosContent();
-		assert true == hasChield(TokenType.BOOLEAN,token);
-		assert true == hasChield(TokenType.TRUE,token);
-		 
 
+		Assert.assertEquals( " " , token.getPosContent());
+		Assert.assertTrue(hasChield(TokenType.BOOLEAN, token));
+		Assert.assertTrue( hasChield(TokenType.TRUE, token));
 
 		cql = "accounts.id =  3 aliasA    teste";
 		token = lexicalParser.isConditionItem(cql, true);
@@ -1388,8 +1385,7 @@ class LexicalParserTest {
 		Assert.assertEquals("accounts.id =  3", token.getContent());
 		Assert.assertEquals(" aliasA    teste", token.getPosContent());
 		Assert.assertEquals(TokenType.CONDITION_ITEM, token.getType());
-		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getSubTokens().get(0).getType());
 		boolean hasSymbol = false;
 		for (Token child : token.getSubTokens()) {
 			if (child.getType().equals(TokenType.OPTIONAL_PAIR_SYMBOL)) {
@@ -1402,25 +1398,18 @@ class LexicalParserTest {
 
 		Assert.assertEquals(5, token.getSubTokens().size());
 
-		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token
-				.getSubTokens().get(0).getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getSubTokens().get(2).getType());
 
-		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(2).getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(3)
-				.getType());
-		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token
-				.getSubTokens().get(4).getType());
+		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(2).getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(3).getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getSubTokens().get(4).getType());
 
 	}
 
 	/**
-	 * // <CONDITIONS> ::= <CONDITION-ITEM>[<SPACES> <JOIN CONDITION>
-	 * <CONDITIONS>]
+	 * // <CONDITIONS> ::= <CONDITION-ITEM>[<SPACES> <JOIN CONDITION> <CONDITIONS>]
 	 */
 	@Test
 	public void conditions() throws CQLException {
@@ -1430,19 +1419,15 @@ class LexicalParserTest {
 		cql = "X=3 AND  X=5";
 		token = lexicalParser.isConditions(cql, false);
 
-
 		cql = "deleteLeft > 0";
 		token = lexicalParser.isConditions(cql, false);
 		token = lexicalParser.isConditions(cql, true);
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
 
-
-
 		Assert.assertNotNull(token);
-		Assert.assertEquals( 5,token.getSubTokens().get(0).getSubTokens(). size());
-		Assert.assertEquals(TokenType.CONDITION_ITEM,
-				token.getSubTokens().get(0).getType());
+		Assert.assertEquals(5, token.getSubTokens().get(0).getSubTokens().size());
+		Assert.assertEquals(TokenType.CONDITION_ITEM, token.getSubTokens().get(0).getType());
 
 		cql = "X=3 aliasa test";
 		token = lexicalParser.isConditions(cql, false);
@@ -1455,22 +1440,18 @@ class LexicalParserTest {
 		token = lexicalParser.isConditions(cql, true);
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
-		Assert.assertEquals(token.getSubTokens().toString(), 5, token
-				.getSubTokens().size());
-		Assert.assertEquals(TokenType.CONDITION_ITEM,
-				token.getSubTokens().get(0).getType());
-		Assert.assertEquals(TokenType.JOIN_CONDITION,
-				token.getSubTokens().get(2).getType());
-		Assert.assertEquals(token.getSubTokens().toString(),
-				TokenType.CONDITIONS, token.getSubTokens().get(4).getType());
+		Assert.assertEquals(token.getSubTokens().toString(), 5, token.getSubTokens().size());
+		Assert.assertEquals(TokenType.CONDITION_ITEM, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.JOIN_CONDITION, token.getSubTokens().get(2).getType());
+		Assert.assertEquals(token.getSubTokens().toString(), TokenType.CONDITIONS,
+				token.getSubTokens().get(4).getType());
 		Assert.assertEquals(" aliasb test", token.getPosContent());
 		cql = "user_token = ?";
 		token = lexicalParser.isConditions(cql, false);
 		token = lexicalParser.isConditions(cql, true);
 		Assert.assertNotNull(token);
 
-		Assert.assertEquals(TokenType.CONDITION_ITEM,
-				token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.CONDITION_ITEM, token.getSubTokens().get(0).getType());
 	}
 
 	@Test
@@ -1480,54 +1461,49 @@ class LexicalParserTest {
 
 		Token cqlToken = lexicalParser.isCQL(cql);
 		String newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('test',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		assert newCQL ==  cqlToken.replace("test", 0);
+		Assert.assertEquals(  newCQL, cqlToken.replace("test", 0));
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES (35,?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		assert newCQL == cqlToken.replace(35, 0);
+		Assert.assertEquals(  newCQL , cqlToken.replace(35, 0));
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES (-35,?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		assert newCQL== cqlToken.replace(-35, 0);
+		Assert.assertEquals(  newCQL, cqlToken.replace(-35, 0));
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('test''test',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		assert newCQL == cqlToken.replace("test'test", 0);
+		Assert.assertEquals(  newCQL,cqlToken.replace("test'test", 0));
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('2012-03-05 22:15:36+0000',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
 		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 		sdf.setTimeZone(TimeZone.getTimeZone("Z"));
 		Date date = sdf.parse("2012-03-05 22:15:36");
-		assert newCQL ==  cqlToken.replace(date, 0);
+		Assert.assertEquals(  newCQL ,cqlToken.replace(date, 0));
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('2012-03-05',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		assert newCQL ==
-		cqlToken.replace(LocalDate.of(2012, Month.MARCH, 05), 0);
+		Assert.assertEquals(  newCQL, cqlToken.replace(LocalDate.of(2012, Month.MARCH, 05), 0));
 
 		cqlToken = lexicalParser.isCQL(cql);
 		newCQL = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES ('2012-03-05 22:15:36+0000',?,?,[?,?,?],{?:?,?:? ,?:? },{?,?,?}) USING TTL ?";
-		ZonedDateTime zonedatetime = ZonedDateTime.of(2012, 3, 05, 22, 15, 36,
-				2873676, ZoneId.of("Z"));
+		ZonedDateTime zonedatetime = ZonedDateTime.of(2012, 3, 05, 22, 15, 36, 2873676, ZoneId.of("Z"));
 		String resultCql = cqlToken.replace(zonedatetime, 0);
-		assert newCQL == resultCql;
+		Assert.assertEquals(  newCQL ,resultCql);
 
 		newCQL = "INSERT INTO logs_login (id,accountId,accessMoment,IP,device) VALUES ('A','A','2012-03-05 22:15:36+0000','1:0:1:0:1:0:1:0',?)";
 
 		cqlToken = lexicalParser.isCQL(newCQL);
 
-		resultCql = cqlToken.replace([:], 0);
+		resultCql = cqlToken.replace(":", 0);
 
-		newCQL = "INSERT INTO logs_login (id,accountId,accessMoment,IP,device) VALUES ('A','A','2012-03-05 22:15:36+0000','1:0:1:0:1:0:1:0',{})";
+		newCQL = "INSERT INTO logs_login (id,accountId,accessMoment,IP,device) VALUES ('A','A','2012-03-05 22:15:36+0000','1:0:1:0:1:0:1:0',':')";
 
-		assert newCQL == resultCql;
-
-
+		Assert.assertEquals(  newCQL , resultCql);
 
 	}
-
-	//	String sql = "UPDATE accounts  USING TTL 100 set token = ? WHERE id = ?";
+ 
 
 	// <CQL>::= [<SPACES>] <COMMAND> [ <SPACES>] [<USING>] [<DOT COMMA>
 	// [<SPACES>]]
@@ -1538,34 +1514,31 @@ class LexicalParserTest {
 		Assert.assertNotNull(cqlToken);
 		Assert.assertEquals(cql, cqlToken.getContent());
 		/*
-		 cql = "select count(*) as valid from accounts where user_token = ? ALLOW FILTERING";
-		 cqlToken = lexicalParser.isCQL(cql);
-		 Assert.assertNotNull(cqlToken);
-		 Assert.assertEquals(cql, cqlToken.getContent());
+		 * cql =
+		 * "select count(*) as valid from accounts where user_token = ? ALLOW FILTERING"
+		 * ; cqlToken = lexicalParser.isCQL(cql); Assert.assertNotNull(cqlToken);
+		 * Assert.assertEquals(cql, cqlToken.getContent());
 		 */
+
+		cql = " UPDATE profiles  USING TTL 100 set rememberToken = 'test' WHERE id = 'test'";
+		cqlToken = lexicalParser.isCQL(cql);
+		Assert.assertNotNull(cqlToken);
+		Assert.assertEquals(cql, cqlToken.getContent());
 
 		cql = "SELECT count(id) as total FROM cmps WHERE deleteLeft > 0";
 		cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
 		Assert.assertEquals(cql, cqlToken.getContent());
 
-
 		cql = "SELECT count(id) as total FROM cmps WHERE deleteLeft > ?";
 		cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
 		Assert.assertEquals(cql, cqlToken.getContent());
 
-
-
-		cql = """
-			INSERT INTO accounts 
-			(accountId,login,email,password,language)  
-			VALUES(?,?,?,?,?)
-			""";
+		cql = " INSERT INTO accounts " + " (accountId,login,email,password,language) " + " VALUES(?,?,?,?,?) ";
 		cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
 		Assert.assertEquals(cql, cqlToken.getContent());
-
 
 		cql = "INSERT INTO test (key,email,age,tags,\"friendsByName\",cmps) VALUES (?,?,?,[?,?,?],{?:?,?:? ,?:? },[?,?,?],{?:?,?:?,?:?})";
 		cqlToken = lexicalParser.isCQL(cql);
@@ -1576,9 +1549,8 @@ class LexicalParserTest {
 		cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
 
-		cql = "CREATE TABLE test " \
-		+ " (key varchar PRIMARY KEY,email text,age int,tags list<text>,"  \
-		+ " \"friendsByName\" map<text,int>, cmps set<int>)";
+		cql = "CREATE TABLE test " + " (key varchar PRIMARY KEY,email text,age int,tags list<text>,"
+				+ " \"friendsByName\" map<text,int>, cmps set<int>)";
 		cqlToken = lexicalParser.isCQL(cql);
 		Assert.assertNotNull(cqlToken);
 		Assert.assertEquals(cql, cqlToken.getContent());
@@ -1661,8 +1633,7 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.USING_OPTION, token.getType());
 		Assert.assertEquals("using ttl ?", token.getContent());
 		Assert.assertEquals("a3", token.getPosContent());
-		Assert.assertEquals(TokenType.START_USING, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.START_USING, token.getSubTokens().get(0).getType());
 
 	}
 
@@ -1702,8 +1673,7 @@ class LexicalParserTest {
 
 		Assert.assertEquals(1, token.getSubTokens().size());
 
-		Assert.assertEquals(TokenType.USING, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.USING, token.getSubTokens().get(0).getType());
 
 		cql = "USING TTL ?a3";
 		token = lexicalParser.isStartUsing(cql, false);
@@ -1718,14 +1688,14 @@ class LexicalParserTest {
 	// <USING>::=u(USING)
 	@Test
 	public void using() throws CQLException {
-		simpleToken(TokenType.USING, lexicalParser.&isUsing);
+		simpleToken(TokenType.USING, lexicalParser::isUsing);
 
 	}
 
 	// <TTL> ::= u("TTL")
 	@Test
 	public void ttl() throws CQLException {
-		simpleToken(TokenType.TTL, lexicalParser.&isTTL);
+		simpleToken(TokenType.TTL, lexicalParser::isTTL);
 	}
 
 	// <TTL PARAMETER>::=<TTL> <SPACES> (<NUMBER> | <INJECT> )
@@ -1916,8 +1886,7 @@ class LexicalParserTest {
 
 		Assert.assertEquals(1, token.getSubTokens().size());
 
-		Assert.assertEquals(TokenType.TTL_PARAMETER, token.getSubTokens()
-				.get(0).getType());
+		Assert.assertEquals(TokenType.TTL_PARAMETER, token.getSubTokens().get(0).getType());
 
 		cql = "TTL 33 USING TTL ?a3";
 		token = lexicalParser.isEndUsing(cql, false);
@@ -2056,12 +2025,9 @@ class LexicalParserTest {
 		Assert.assertEquals("² adsfasdf ", token.getPosContent());
 		Assert.assertEquals(TokenType.HEX, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.SIGN, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.START_HEX, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.ABSOLUTE_HEX, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.SIGN, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.START_HEX, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.ABSOLUTE_HEX, token.getSubTokens().get(2).getType());
 
 		cql = "+0X1234abcde² adsfasdf ";
 		token = lexicalParser.isHexa(cql, false);
@@ -2070,11 +2036,11 @@ class LexicalParserTest {
 		Assert.assertEquals("² adsfasdf ", token.getPosContent());
 		Assert.assertEquals(TokenType.HEX, token.getType());
 
-		cql = "0X1234abcde\$ adsfasdf ";
+		cql = "0X1234abcde$ adsfasdf ";
 		token = lexicalParser.isHexa(cql, false);
 		Assert.assertNotNull(token);
 		Assert.assertEquals("0X1234abcde", token.getContent());
-		Assert.assertEquals("\$ adsfasdf ", token.getPosContent());
+		Assert.assertEquals("$ adsfasdf ", token.getPosContent());
 		Assert.assertEquals(TokenType.HEX, token.getType());
 
 		cql = "\"0X1234abcde\" adsfasdf ";
@@ -2120,8 +2086,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("?", token.getContent());
-		Assert.assertEquals(". \n adf '' ; * ?  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals(". \n adf '' ; * ?  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.INJECT, token.getType());
 		Assert.assertEquals(0, token.getSubTokens().size());
 		Assert.assertNull(token.getAfter());
@@ -2141,14 +2106,11 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals(". ", token.getContent());
 		Assert.assertEquals("", token.getPosContent());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
-				token.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token.getType());
 		Assert.assertEquals(2, token.getSubTokens().size());
 
-		Assert.assertEquals(TokenType.ANY, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token
-				.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.ANY, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token.getSubTokens().get(1).getType());
 
 		Assert.assertEquals(2, token.getSubTokens().size());
 
@@ -2164,8 +2126,7 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.ANY, subtoken.getType());
 
 		subtoken = token.getSubTokens().get(1);
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
-				subtoken.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, subtoken.getType());
 
 		cql = "teste''teste";
 		token = lexicalParser.isInputCharacterExceptSingle(cql, true);
@@ -2173,14 +2134,12 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals("teste''teste", token.getContent());
 		Assert.assertEquals("", token.getPosContent());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
-				token.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token.getType());
 
 		subtoken = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.ANY, subtoken.getType());
 		subtoken = token.getSubTokens().get(1);
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
-				subtoken.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, subtoken.getType());
 
 		cql = "adf ''' 123";
 		token = lexicalParser.isInputCharacterExceptSingle(cql, true);
@@ -2189,8 +2148,7 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals("adf ''", token.getContent());
 		Assert.assertEquals("' 123", token.getPosContent());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
-				token.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token.getType());
 
 		cql = "teste''teste'teste";
 		token = lexicalParser.isInputCharacterExceptSingle(cql, true);
@@ -2199,8 +2157,7 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals("teste''teste", token.getContent());
 		Assert.assertEquals("'teste", token.getPosContent());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
-				token.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token.getType());
 
 		subtoken = token.getSubTokens().get(0);
 
@@ -2208,8 +2165,7 @@ class LexicalParserTest {
 
 		subtoken = token.getSubTokens().get(1);
 
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE,
-				subtoken.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, subtoken.getType());
 
 	}
 
@@ -2226,15 +2182,13 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals(". teste", token.getContent());
 		Assert.assertEquals("", token.getPosContent());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
-				token.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, token.getType());
 
 		Token subtoken = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.ANY, subtoken.getType());
 
 		subtoken = token.getSubTokens().get(1);
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
-				subtoken.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, subtoken.getType());
 
 		cql = "teste'teste";
 		token = lexicalParser.isInputCharacterExceptDouble(cql, true);
@@ -2243,15 +2197,13 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals("teste'teste", token.getContent());
 		Assert.assertEquals("", token.getPosContent());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
-				token.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, token.getType());
 
 		subtoken = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.ANY, subtoken.getType());
 
 		subtoken = token.getSubTokens().get(1);
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
-				subtoken.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, subtoken.getType());
 
 		cql = "teste''teste";
 		token = lexicalParser.isInputCharacterExceptDouble(cql, true);
@@ -2259,15 +2211,13 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals("teste''teste", token.getContent());
 		Assert.assertEquals("", token.getPosContent());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
-				token.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, token.getType());
 
 		subtoken = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.ANY, subtoken.getType());
 
 		subtoken = token.getSubTokens().get(1);
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
-				subtoken.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, subtoken.getType());
 
 		cql = "teste''teste'teste";
 		token = lexicalParser.isInputCharacterExceptDouble(cql, true);
@@ -2275,15 +2225,13 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals("teste''teste'teste", token.getContent());
 		Assert.assertEquals("", token.getPosContent());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
-				token.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, token.getType());
 
 		subtoken = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.ANY, subtoken.getType());
 
 		subtoken = token.getSubTokens().get(1);
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE,
-				subtoken.getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, subtoken.getType());
 
 	}
 
@@ -2299,15 +2247,14 @@ class LexicalParserTest {
 		token = lexicalParser.isItemName(cql, false);
 		Assert.assertNull(token);
 
-		cql = "\"1234abcde\$\" adsfasdf ";
+		cql = "\"1234abcde$\" adsfasdf ";
 		token = lexicalParser.isItemName(cql, false);
 		Assert.assertNull(token);
 
 		cql = "\"é1234abcde\" adsfasdf ";
 		token = lexicalParser.isItemName(cql, true);
 		Assert.assertEquals(TokenType.ITEMNAME, token.getType());
-		Assert.assertEquals(TokenType.ITEM_NAME_CASE_SENSITIVE, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.ITEM_NAME_CASE_SENSITIVE, token.getSubTokens().get(0).getType());
 
 		cql = "\"1234abcde\" adsfasdf ";
 		token = lexicalParser.isItemName(cql, true);
@@ -2317,8 +2264,7 @@ class LexicalParserTest {
 		Assert.assertEquals(" adsfasdf ", token.getPosContent());
 		Assert.assertEquals(1, token.getSubTokens().size());
 		Assert.assertEquals(TokenType.ITEMNAME, token.getType());
-		Assert.assertEquals(TokenType.ITEM_NAME_CASE_SENSITIVE, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.ITEM_NAME_CASE_SENSITIVE, token.getSubTokens().get(0).getType());
 		Assert.assertNull(token.getSubTokens().get(0).getAfter());
 		Assert.assertNull(token.getSubTokens().get(0).getBefore());
 
@@ -2330,8 +2276,7 @@ class LexicalParserTest {
 		Assert.assertEquals("abcde1234", token.getContent());
 		Assert.assertEquals(" adsfasdf ", token.getPosContent());
 		Assert.assertEquals(TokenType.ITEMNAME, token.getType());
-		Assert.assertEquals(TokenType.ITEM_NAME_CASE_INSENSITIVE, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.ITEM_NAME_CASE_INSENSITIVE, token.getSubTokens().get(0).getType());
 
 	}
 
@@ -2346,7 +2291,7 @@ class LexicalParserTest {
 		token = lexicalParser.isItemNameCaseInsensitive(cql, false);
 		Assert.assertNull(token);
 
-		cql = "1234abcde\$ adsfasdf ";
+		cql = "1234abcde$ adsfasdf ";
 		token = lexicalParser.isItemNameCaseInsensitive(cql, false);
 		Assert.assertNull(token);
 
@@ -2357,10 +2302,8 @@ class LexicalParserTest {
 		cql = "é1234abcde adsfasdf ";
 		token = lexicalParser.isItemNameCaseInsensitive(cql, false);
 		Assert.assertEquals("é1234abcde", token.getContent());
-		Assert.assertEquals(TokenType.ITEM_NAME_CASE_INSENSITIVE,
-				token.getType());
-		Assert.assertEquals(TokenType.CHARS, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.ITEM_NAME_CASE_INSENSITIVE, token.getType());
+		Assert.assertEquals(TokenType.CHARS, token.getSubTokens().get(0).getType());
 
 		cql = "abcde1234 adsfasdf ";
 		token = lexicalParser.isItemNameCaseInsensitive(cql, true);
@@ -2370,10 +2313,8 @@ class LexicalParserTest {
 		Assert.assertEquals("abcde1234", token.getContent());
 		Assert.assertEquals(" adsfasdf ", token.getPosContent());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.ITEM_NAME_CASE_INSENSITIVE,
-				token.getType());
-		Assert.assertEquals(TokenType.CHARS, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.ITEM_NAME_CASE_INSENSITIVE, token.getType());
+		Assert.assertEquals(TokenType.CHARS, token.getSubTokens().get(0).getType());
 		Assert.assertNull(token.getSubTokens().get(0).getAfter());
 		Assert.assertNull(token.getSubTokens().get(0).getBefore());
 
@@ -2390,7 +2331,7 @@ class LexicalParserTest {
 		token = lexicalParser.isItemNameCaseSensitive(cql, false);
 		Assert.assertNull(token);
 
-		cql = "\"1234abcde\$\" adsfasdf ";
+		cql = "\"1234abcde$\" adsfasdf ";
 		token = lexicalParser.isItemNameCaseSensitive(cql, false);
 		Assert.assertNull(token);
 
@@ -2420,8 +2361,7 @@ class LexicalParserTest {
 		subToken = token.getSubTokens().get(2);
 		Assert.assertEquals(TokenType.DOUBLE_QUOTED, subToken.getType());
 		Assert.assertNull(token.getSubTokens().get(0).getBefore());
-		Assert.assertEquals(TokenType.CHARS, token.getSubTokens().get(0)
-				.getAfter().getType());
+		Assert.assertEquals(TokenType.CHARS, token.getSubTokens().get(0).getAfter().getType());
 
 		cql = "1234abcde adsfasdf ";
 		token = lexicalParser.isItemNameCaseSensitive(cql, false);
@@ -2429,7 +2369,7 @@ class LexicalParserTest {
 	}
 
 	/**
-	 * <LITERAL> ::= <NUMBER> | <STRING> | <BOOLEAN> | <HEXA> 
+	 * <LITERAL> ::= <NUMBER> | <STRING> | <BOOLEAN> | <HEXA>
 	 */
 	@Test
 	public void literal() throws CQLException {
@@ -2439,14 +2379,11 @@ class LexicalParserTest {
 		cql = "'. teste";
 		Assert.assertNull(lexicalParser.isLiteral(cql, false));
 
-
-
 		cql = ". teste'";
 		Assert.assertNull(lexicalParser.isLiteral(cql, false));
 
 		cql = "abc.def";
 		Assert.assertNull(lexicalParser.isLiteral(cql, false));
-
 
 		cql = "0xe1234abc-de adsfasdf ";
 		Token token = lexicalParser.isHexa(cql, false);
@@ -2457,29 +2394,23 @@ class LexicalParserTest {
 
 		token = lexicalParser.isLiteral(cql, false);
 
-
-
 		Assert.assertNotNull(token);
 		Assert.assertEquals("true", token.getContent());
 		Assert.assertEquals("asdf adsfasdf ", token.getPosContent());
 		Assert.assertEquals(TokenType.LITERAL, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.BOOLEAN, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.BOOLEAN, token.getSubTokens().get(0).getType());
 
 		cql = "'. \n adf '' ; * ?  teste' 123";
 		token = lexicalParser.isLiteral(cql, true);
 		token = lexicalParser.isLiteral(cql, false);
-
-
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("'. \n adf '' ; * ?  teste'", token.getContent());
 		Assert.assertEquals(" 123", token.getPosContent());
 		Assert.assertEquals(TokenType.LITERAL, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.STRING, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.STRING, token.getSubTokens().get(0).getType());
 
 		cql = "'. \n adf '' ; * ?  teste' 123'";
 		token = lexicalParser.isLiteral(cql, true);
@@ -2491,8 +2422,7 @@ class LexicalParserTest {
 		Assert.assertEquals(" 123'", token.getPosContent());
 		Assert.assertEquals(TokenType.LITERAL, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.STRING, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.STRING, token.getSubTokens().get(0).getType());
 
 		cql = " 1234abcde adsfasdf ";
 		token = lexicalParser.isLiteral(cql, false);
@@ -2501,7 +2431,6 @@ class LexicalParserTest {
 		cql = "é1234abcde adsfasdf ";
 		token = lexicalParser.isLiteral(cql, false);
 		Assert.assertNull(token);
-
 
 	}
 
@@ -2550,22 +2479,21 @@ class LexicalParserTest {
 	// <OR> ::= u(OR)
 	@Test
 	public void or() throws CQLException {
-		simpleToken(TokenType.OR, lexicalParser.&isOr);
+		simpleToken(TokenType.OR, lexicalParser::isOr);
 
 	}
-
 
 	// <TRUE> ::= u(TRUE)
 	@Test
 	public void trueTest() throws CQLException {
-		simpleToken(TokenType.TRUE, lexicalParser.&isTrue);
+		simpleToken(TokenType.TRUE, lexicalParser::isTrue);
 
 	}
 
 	// <FALSE> ::= u(FALSE)
 	@Test
 	public void falseTest() throws CQLException {
-		simpleToken(TokenType.FALSE, lexicalParser.&isFalse);
+		simpleToken(TokenType.FALSE, lexicalParser::isFalse);
 
 	}
 
@@ -2587,14 +2515,12 @@ class LexicalParserTest {
 		cql = "true";
 		token = lexicalParser.isBoolean(cql, true);
 		Assert.assertNotNull(token);
-		Assert.assertEquals(TokenType.TRUE,token.getSubTokens().get(0).getType());
-
+		Assert.assertEquals(TokenType.TRUE, token.getSubTokens().get(0).getType());
 
 		cql = "false";
 		token = lexicalParser.isBoolean(cql, true);
 		Assert.assertNotNull(token);
-		Assert.assertEquals(TokenType.FALSE,token.getSubTokens().get(0).getType());
-
+		Assert.assertEquals(TokenType.FALSE, token.getSubTokens().get(0).getType());
 
 	}
 
@@ -2634,8 +2560,7 @@ class LexicalParserTest {
 		token = lexicalParser.isReservedWords(cql, true);
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
-		Assert.assertEquals("SELECT INSERT  UPDATE   DELETE",
-				token.getContent());
+		Assert.assertEquals("SELECT INSERT  UPDATE   DELETE", token.getContent());
 		Assert.assertEquals(TokenType.RESERVED_WORDS, token.getType());
 		Assert.assertEquals(7, token.getSubTokens().size());
 		Assert.assertNull(token.getBefore());
@@ -2706,8 +2631,7 @@ class LexicalParserTest {
 		token = lexicalParser.isReservedWords(cql, true);
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
-		Assert.assertEquals("SELECT  INSERT   UPDATE    DELETE",
-				token.getContent());
+		Assert.assertEquals("SELECT  INSERT   UPDATE    DELETE", token.getContent());
 		Assert.assertEquals(TokenType.RESERVED_WORDS, token.getType());
 		Assert.assertEquals(7, token.getSubTokens().size());
 		Assert.assertNull(token.getBefore());
@@ -2811,8 +2735,7 @@ class LexicalParserTest {
 		token = lexicalParser.isSelectorBlock(cql, false);
 		token = lexicalParser.isSelectorBlock(cql, true);
 		Assert.assertNotNull(token);
-		Assert.assertEquals("?,?,?,[?,?,?],{?:?,?:? ,?:? },{?:?,?:?}",
-				token.getContent());
+		Assert.assertEquals("?,?,?,[?,?,?],{?:?,?:? ,?:? },{?:?,?:?}", token.getContent());
 		Assert.assertEquals(")", token.getPosContent());
 
 		cql = "teste3.teste  , teste2INSERT";
@@ -2821,16 +2744,11 @@ class LexicalParserTest {
 		Assert.assertEquals(5, token.getSubTokens().size());
 		Assert.assertEquals("", token.getPosContent());
 		Assert.assertEquals("teste3.teste  , teste2INSERT", token.getContent());
-		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.COMMA, token.getSubTokens().get(2)
-				.getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(3)
-				.getType());
-		Assert.assertEquals(TokenType.SELECTOR_BLOCK,
-				token.getSubTokens().get(4).getType());
+		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.COMMA, token.getSubTokens().get(2).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(3).getType());
+		Assert.assertEquals(TokenType.SELECTOR_BLOCK, token.getSubTokens().get(4).getType());
 
 		cql = "abc.def)";
 		token = lexicalParser.isSelectorBlock(cql, false);
@@ -2871,15 +2789,13 @@ class LexicalParserTest {
 		Assert.assertEquals(" 123", token.getPosContent());
 		Assert.assertEquals(TokenType.SELECTOR_ITEM, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getSubTokens().get(0).getType());
 
 		cql = "3";
 		token = lexicalParser.isSelectorItem(cql, true);
 		token = lexicalParser.isSelectorItem(cql, false);
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getSubTokens().get(0).getType());
 
 		cql = "'. \n adf '' ; * ?  teste' 123'";
 		token = lexicalParser.isSelectorItem(cql, true);
@@ -2890,8 +2806,7 @@ class LexicalParserTest {
 		Assert.assertEquals(" 123'", token.getPosContent());
 		Assert.assertEquals(TokenType.SELECTOR_ITEM, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getSubTokens().get(0).getType());
 
 		cql = "abcde1234 adsfasdf adsfasdf";
 		token = lexicalParser.isSelectorItem(cql, true);
@@ -2899,8 +2814,7 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals(TokenType.SELECTOR_ITEM, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getSubTokens().get(0).getType());
 		Assert.assertEquals("abcde1234 adsfasdf", token.getContent());
 		Assert.assertEquals(" adsfasdf", token.getPosContent());
 
@@ -2911,8 +2825,7 @@ class LexicalParserTest {
 		Assert.assertEquals("? afd", token.getContent());
 		Assert.assertEquals(" adsf adsfasdf ", token.getPosContent());
 		Assert.assertEquals(TokenType.SELECTOR_ITEM, token.getType());
-		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getSubTokens().get(0).getType());
 
 		cql = "accounts.id = 3";
 		token = lexicalParser.isSelectorItem(cql, true);
@@ -2921,8 +2834,7 @@ class LexicalParserTest {
 		Assert.assertEquals("accounts.id", token.getContent());
 		Assert.assertEquals(" = 3", token.getPosContent());
 		Assert.assertEquals(TokenType.SELECTOR_ITEM, token.getType());
-		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token
-				.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getSubTokens().get(0).getType());
 
 		cql = "[3,5,6] , 6";
 		token = lexicalParser.isSelectorItem(cql, true);
@@ -2989,15 +2901,13 @@ class LexicalParserTest {
 		Assert.assertEquals(" 123", token.getPosContent());
 		Assert.assertEquals(TokenType.FIELD_VALUE, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0).getType());
 
 		cql = "3";
 		token = lexicalParser.isFieldValue(cql, true);
 		token = lexicalParser.isFieldValue(cql, false);
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0).getType());
 
 		cql = "'. \n adf '' ; * ?  teste' 123'";
 		token = lexicalParser.isFieldValue(cql, true);
@@ -3008,15 +2918,13 @@ class LexicalParserTest {
 		Assert.assertEquals(" 123'", token.getPosContent());
 		Assert.assertEquals(TokenType.FIELD_VALUE, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0).getType());
 
 		cql = "true";
 		token = lexicalParser.isFieldValue(cql, true);
 		token = lexicalParser.isFieldValue(cql, false);
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0).getType());
 
 		cql = "abcde1234 adsfasdf adsfasdf";
 		token = lexicalParser.isFieldValue(cql, true);
@@ -3024,8 +2932,7 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals(TokenType.FIELD_VALUE, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.FIELD_NAME, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.FIELD_NAME, token.getSubTokens().get(0).getType());
 		Assert.assertEquals("abcde1234", token.getContent());
 		Assert.assertEquals(" adsfasdf adsfasdf", token.getPosContent());
 
@@ -3036,8 +2943,7 @@ class LexicalParserTest {
 		Assert.assertEquals("?", token.getContent());
 		Assert.assertEquals(" afd adsf adsfasdf ", token.getPosContent());
 		Assert.assertEquals(TokenType.FIELD_VALUE, token.getType());
-		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0).getType());
 
 		cql = "accounts.id = 3";
 		token = lexicalParser.isFieldValue(cql, true);
@@ -3046,8 +2952,7 @@ class LexicalParserTest {
 		Assert.assertEquals("accounts.id", token.getContent());
 		Assert.assertEquals(" = 3", token.getPosContent());
 		Assert.assertEquals(TokenType.FIELD_VALUE, token.getType());
-		Assert.assertEquals(TokenType.FIELD_NAME, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.FIELD_NAME, token.getSubTokens().get(0).getType());
 
 		cql = "[3,5,6] , 6";
 		token = lexicalParser.isFieldValue(cql, true);
@@ -3070,12 +2975,9 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.FIELD_VALUE, token.getType());
 		token = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.MAP, token.getType());
-		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.PROPERTIES, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.PROPERTIES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(2).getType());
 
 		cql = "tableA.fieldA as fieldB, test";
 		token = lexicalParser.isFieldValue(cql, true);
@@ -3142,15 +3044,13 @@ class LexicalParserTest {
 		Assert.assertEquals(" 123", token.getPosContent());
 		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0).getType());
 
 		cql = "3";
 		token = lexicalParser.isSelectorItemStrict(cql, true);
 		token = lexicalParser.isSelectorItemStrict(cql, false);
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0).getType());
 
 		cql = "'. \n adf '' ; * ?  teste' 123'";
 		token = lexicalParser.isSelectorItemStrict(cql, true);
@@ -3161,8 +3061,7 @@ class LexicalParserTest {
 		Assert.assertEquals(" 123'", token.getPosContent());
 		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0).getType());
 
 		cql = "abcde1234 adsfasdf adsfasdf";
 		token = lexicalParser.isSelectorItemStrict(cql, true);
@@ -3170,8 +3069,7 @@ class LexicalParserTest {
 		Assert.assertNotNull(token);
 		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0).getType());
 		Assert.assertEquals("abcde1234", token.getContent());
 		Assert.assertEquals(" adsfasdf adsfasdf", token.getPosContent());
 
@@ -3182,8 +3080,7 @@ class LexicalParserTest {
 		Assert.assertEquals("?", token.getContent());
 		Assert.assertEquals(" afd adsf adsfasdf ", token.getPosContent());
 		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getType());
-		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0).getType());
 
 		cql = "accounts.id = 3";
 		token = lexicalParser.isSelectorItemStrict(cql, true);
@@ -3192,8 +3089,7 @@ class LexicalParserTest {
 		Assert.assertEquals("accounts.id", token.getContent());
 		Assert.assertEquals(" = 3", token.getPosContent());
 		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getType());
-		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.FIELD_VALUE, token.getSubTokens().get(0).getType());
 
 		cql = "[3,5,6] , 6";
 		token = lexicalParser.isSelectorItemStrict(cql, true);
@@ -3216,8 +3112,7 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.SELECTOR_ITEM_STRICT, token.getType());
 		token = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.FIELD_VALUE, token.getType());
-		Assert.assertEquals(TokenType.MAP, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.MAP, token.getSubTokens().get(0).getType());
 
 		cql = "tableA.fieldA as fieldB, test";
 		token = lexicalParser.isSelectorItemStrict(cql, true);
@@ -3250,10 +3145,8 @@ class LexicalParserTest {
 		Assert.assertEquals(" , 6", token.getPosContent());
 		Assert.assertEquals(TokenType.ARRAY_BRACE, token.getType());
 		Assert.assertEquals(2, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(1)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(1).getType());
 
 		cql = "{'Test' , 35} , 6";
 		token = lexicalParser.isArrayBrace(cql, true);
@@ -3262,12 +3155,9 @@ class LexicalParserTest {
 		Assert.assertEquals("{'Test' , 35}", token.getContent());
 		Assert.assertEquals(" , 6", token.getPosContent());
 		Assert.assertEquals(TokenType.ARRAY_BRACE, token.getType());
-		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.SELECTOR_BLOCK,
-				token.getSubTokens().get(1).getType());
-		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_BLOCK, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(2).getType());
 
 	}
 
@@ -3291,10 +3181,8 @@ class LexicalParserTest {
 		Assert.assertEquals(" , 6", token.getPosContent());
 		Assert.assertEquals(TokenType.MAP, token.getType());
 		Assert.assertEquals(2, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(1)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(1).getType());
 
 		cql = "{name:'Test',age:35} , 6";
 		token = lexicalParser.isMap(cql, true);
@@ -3303,12 +3191,9 @@ class LexicalParserTest {
 		Assert.assertEquals("{name:'Test',age:35}", token.getContent());
 		Assert.assertEquals(" , 6", token.getPosContent());
 		Assert.assertEquals(TokenType.MAP, token.getType());
-		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.PROPERTIES, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACE, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.PROPERTIES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.END_BRACE, token.getSubTokens().get(2).getType());
 
 	}
 
@@ -3334,17 +3219,13 @@ class LexicalParserTest {
 		token = lexicalParser.isProperties(cql, false);
 		Assert.assertEquals(token.rebuild(), token.getContent());
 		Assert.assertNotNull(token);
-		Assert.assertEquals("name:'Test',age:35,color:'fff'",
-				token.getContent());
+		Assert.assertEquals("name:'Test',age:35,color:'fff'", token.getContent());
 		Assert.assertEquals(" } , 6", token.getPosContent());
 		Assert.assertEquals(TokenType.PROPERTIES, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.PROPERTY, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.COMMA, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.PROPERTIES, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.PROPERTY, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.COMMA, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.PROPERTIES, token.getSubTokens().get(2).getType());
 
 		cql = "a:'a',b:'b'} where user_token = ?";
 		token = lexicalParser.isProperties(cql, true);
@@ -3354,12 +3235,9 @@ class LexicalParserTest {
 		Assert.assertEquals("} where user_token = ?", token.getPosContent());
 		Assert.assertEquals(TokenType.PROPERTIES, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.PROPERTY, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.COMMA, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.PROPERTIES, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.PROPERTY, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.COMMA, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.PROPERTIES, token.getSubTokens().get(2).getType());
 
 	}
 
@@ -3390,17 +3268,12 @@ class LexicalParserTest {
 		Assert.assertEquals(" , age : 35 ", token.getPosContent());
 		Assert.assertEquals(TokenType.PROPERTY, token.getType());
 		Assert.assertEquals(5, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.KEY, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.DOUBLE_DOT, token.getSubTokens().get(2)
-				.getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(3)
-				.getType());
+		Assert.assertEquals(TokenType.KEY, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.DOUBLE_DOT, token.getSubTokens().get(2).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(3).getType());
 
-		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(4)
-				.getType());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(4).getType());
 
 		cql = "name:'Test',age:35";
 
@@ -3411,12 +3284,9 @@ class LexicalParserTest {
 		Assert.assertEquals(",age:35", token.getPosContent());
 		Assert.assertEquals(TokenType.PROPERTY, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.KEY, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.DOUBLE_DOT, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.KEY, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.DOUBLE_DOT, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(2).getType());
 
 	}
 
@@ -3441,8 +3311,7 @@ class LexicalParserTest {
 		Assert.assertEquals("name", token.getContent());
 		Assert.assertEquals(TokenType.KEY, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.CHARS, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.CHARS, token.getSubTokens().get(0).getType());
 
 		cql = "'name' : 'Test' , age : 35 } , 6";
 		token = lexicalParser.isKey(cql, false);
@@ -3452,8 +3321,7 @@ class LexicalParserTest {
 		Assert.assertEquals("'name'", token.getContent());
 		Assert.assertEquals(TokenType.KEY, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0)
-				.getType());
+		Assert.assertEquals(TokenType.LITERAL, token.getSubTokens().get(0).getType());
 
 	}
 
@@ -3478,8 +3346,7 @@ class LexicalParserTest {
 
 		Assert.assertEquals(TokenType.START_BRACKET, sub.getType());
 		Assert.assertEquals(TokenType.SELECTOR_BLOCK, sub.getAfter().getType());
-		Assert.assertEquals(TokenType.END_BRACKET, sub.getAfter().getAfter()
-				.getType());
+		Assert.assertEquals(TokenType.END_BRACKET, sub.getAfter().getAfter().getType());
 
 		cql = "[] , 6";
 		token = lexicalParser.isArray(cql, true);
@@ -3490,10 +3357,8 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.ARRAY, token.getType());
 		sub = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.ARRAY_BRACKET, sub.getType());
-		Assert.assertEquals(TokenType.START_BRACKET, sub.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.END_BRACKET, sub.getSubTokens().get(1)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACKET, sub.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.END_BRACKET, sub.getSubTokens().get(1).getType());
 
 		cql = "{3,5} , 6";
 		token = lexicalParser.isArray(cql, true);
@@ -3504,12 +3369,9 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.ARRAY, token.getType());
 		sub = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.ARRAY_BRACE, sub.getType());
-		Assert.assertEquals(TokenType.START_BRACE, sub.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.SELECTOR_BLOCK, sub.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.END_BRACE, sub.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACE, sub.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_BLOCK, sub.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.END_BRACE, sub.getSubTokens().get(2).getType());
 
 		cql = "{} , 6";
 		token = lexicalParser.isArray(cql, true);
@@ -3521,16 +3383,14 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.ARRAY, token.getType());
 		sub = token.getSubTokens().get(0);
 		Assert.assertEquals(TokenType.ARRAY_BRACE, sub.getType());
-		Assert.assertEquals(TokenType.START_BRACE, sub.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.END_BRACE, sub.getSubTokens().get(1)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACE, sub.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.END_BRACE, sub.getSubTokens().get(1).getType());
 
 	}
 
 	/**
-	 * <ARRAY BRACKET>::= <START BRACKET>[<SPACES>][<SELECTOR
-	 * BLOCK>][<SPACES>]<END BRACKET>
+	 * <ARRAY BRACKET>::= <START BRACKET>[<SPACES>][<SELECTOR BLOCK>][<SPACES>]<END
+	 * BRACKET>
 	 */
 	@Test
 	public void arrayBracket() throws CQLException {
@@ -3549,12 +3409,9 @@ class LexicalParserTest {
 		Assert.assertEquals("[3,5]", token.getContent());
 		Assert.assertEquals(" , 6", token.getPosContent());
 		Assert.assertEquals(TokenType.ARRAY_BRACKET, token.getType());
-		Assert.assertEquals(TokenType.START_BRACKET, token.getSubTokens()
-				.get(0).getType());
-		Assert.assertEquals(TokenType.SELECTOR_BLOCK,
-				token.getSubTokens().get(1).getType());
-		Assert.assertEquals(TokenType.END_BRACKET, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACKET, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SELECTOR_BLOCK, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.END_BRACKET, token.getSubTokens().get(2).getType());
 
 		cql = "[] , 6";
 		token = lexicalParser.isArrayBracket(cql, true);
@@ -3564,10 +3421,8 @@ class LexicalParserTest {
 		Assert.assertEquals("[]", token.getContent());
 		Assert.assertEquals(" , 6", token.getPosContent());
 		Assert.assertEquals(TokenType.ARRAY_BRACKET, token.getType());
-		Assert.assertEquals(TokenType.START_BRACKET, token.getSubTokens()
-				.get(0).getType());
-		Assert.assertEquals(TokenType.END_BRACKET, token.getSubTokens().get(1)
-				.getType());
+		Assert.assertEquals(TokenType.START_BRACKET, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.END_BRACKET, token.getSubTokens().get(1).getType());
 
 	}
 
@@ -3596,6 +3451,8 @@ class LexicalParserTest {
 
 	}
 
+	// <SPACES>::=<SPACE> [<SPACES>]
+
 	@Test
 	public void spaces() throws CQLException {
 		String cql = " x";
@@ -3618,16 +3475,15 @@ class LexicalParserTest {
 		Assert.assertEquals("x \n ", token.getPosContent());
 		Assert.assertEquals(TokenType.SPACES, token.getType());
 
-		def expected = """
-		""";
+		String expected = " \n ";
 
-		cql = """${expected}x${expected}""";
+		cql = " \n x \n ";
 		token = lexicalParser.isSpaces(cql, false);
 		Assert.assertNotNull(token);
 
-		assert expected  ==  token.getContent();
-		assert "x${expected}" == token.getPosContent();
-		assert  TokenType.SPACES ==  token.getType();
+		Assert.assertEquals(expected, token.getContent());
+		Assert.assertEquals("x \n ", token.getPosContent());
+		assert TokenType.SPACES == token.getType();
 
 	}
 
@@ -3755,9 +3611,8 @@ class LexicalParserTest {
 	}
 
 	/**
-	 * <STRING>::= (<SINGLE QUOTED>[<INPUT CHARACTER EXCEPT SINGLE>]<SINGLE
-	 * QUOTED>) | (<DOUBLE QUOTED>[<INPUT CHARACTER EXCEPT DOUBLE>]<DOUBLE
-	 * QUOTED>)
+	 * <STRING>::= (<SINGLE QUOTED>[<INPUT CHARACTER EXCEPT SINGLE>]<SINGLE QUOTED>)
+	 * | (<DOUBLE QUOTED>[<INPUT CHARACTER EXCEPT DOUBLE>]<DOUBLE QUOTED>)
 	 */
 	@Test
 	public void string() throws CQLException {
@@ -3765,8 +3620,7 @@ class LexicalParserTest {
 		Assert.assertNull(lexicalParser.isString(cql, false));
 
 		cql = "'. teste";
-		Assert.assertNull("Non string [" + cql + "]",
-				lexicalParser.isString(cql, false));
+		Assert.assertNull("Non string [" + cql + "]", lexicalParser.isString(cql, false));
 
 		cql = ". teste'";
 		Assert.assertNull(lexicalParser.isString(cql, false));
@@ -3781,12 +3635,9 @@ class LexicalParserTest {
 		Assert.assertEquals(" 123", token.getPosContent());
 		Assert.assertEquals(TokenType.STRING, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.SINGLE_QUOTED, token.getSubTokens()
-				.get(0).getType());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token
-				.getSubTokens().get(1).getType());
-		Assert.assertEquals(TokenType.SINGLE_QUOTED, token.getSubTokens()
-				.get(2).getType());
+		Assert.assertEquals(TokenType.SINGLE_QUOTED, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.SINGLE_QUOTED, token.getSubTokens().get(2).getType());
 
 		cql = "'. \n adf ''' 123";
 
@@ -3801,30 +3652,23 @@ class LexicalParserTest {
 
 		Assert.assertEquals(3, token.getSubTokens().size());
 		// vai dar erro, falta ' e '
-		Assert.assertEquals(TokenType.SINGLE_QUOTED, token.getSubTokens()
-				.get(0).getType());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token
-				.getSubTokens().get(1).getType());
-		Assert.assertEquals(TokenType.SINGLE_QUOTED, token.getSubTokens()
-				.get(2).getType());
+		Assert.assertEquals(TokenType.SINGLE_QUOTED, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_SINGLE, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.SINGLE_QUOTED, token.getSubTokens().get(2).getType());
 
 		cql = "\". \n 'adf \"\" ;' * ?  test\" 123'";
 		token = lexicalParser.isString(cql, true);
 		token = lexicalParser.isString(cql, false);
 		Assert.assertNotNull(token);
-		Assert.assertEquals("\". \n 'adf \"\" ;' * ?  test\"",
-				token.getContent());
+		Assert.assertEquals("\". \n 'adf \"\" ;' * ?  test\"", token.getContent());
 		Assert.assertEquals(" 123'", token.getPosContent());
 		Assert.assertEquals(TokenType.STRING, token.getType());
 
 		Assert.assertEquals(3, token.getSubTokens().size());
 		// vai dar erro, falta ' e '
-		Assert.assertEquals(TokenType.DOUBLE_QUOTED, token.getSubTokens()
-				.get(0).getType());
-		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, token
-				.getSubTokens().get(1).getType());
-		Assert.assertEquals(TokenType.DOUBLE_QUOTED, token.getSubTokens()
-				.get(2).getType());
+		Assert.assertEquals(TokenType.DOUBLE_QUOTED, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.INPUT_CHARACTER_EXCEPT_DOUBLE, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.DOUBLE_QUOTED, token.getSubTokens().get(2).getType());
 
 	}
 
@@ -3835,8 +3679,7 @@ class LexicalParserTest {
 		Assert.assertNull(lexicalParser.isLimitOption(cql, false));
 
 		cql = "limit .1";
-		Assert.assertNull("Non limitOption [" + cql + "]",
-				lexicalParser.isLimitOption(cql, false));
+		Assert.assertNull("Non limitOption [" + cql + "]", lexicalParser.isLimitOption(cql, false));
 
 		cql = "limit abc";
 		Assert.assertNull(lexicalParser.isLimitOption(cql, false));
@@ -3855,12 +3698,9 @@ class LexicalParserTest {
 		Assert.assertEquals(" test", token.getPosContent());
 		Assert.assertEquals(TokenType.LIMIT_OPTION, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.LIMIT, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.NUMBER, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.LIMIT, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.NUMBER, token.getSubTokens().get(2).getType());
 
 		cql = "limit ? test";
 		token = lexicalParser.isLimitOption(cql, true);
@@ -3873,14 +3713,10 @@ class LexicalParserTest {
 		Assert.assertEquals(" test", token.getPosContent());
 		Assert.assertEquals(TokenType.LIMIT_OPTION, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.LIMIT, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.INJECT, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.LIMIT, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.INJECT, token.getSubTokens().get(2).getType());
 	}
-
 
 	// <OPTIONAL PAIR SIMBOL> ::= <SYMBOL>[<SYMBOL>]
 	@Test
@@ -3906,8 +3742,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("*", token.getContent());
-		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
 		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
@@ -3919,8 +3754,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("-", token.getContent());
-		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
 		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
@@ -3931,8 +3765,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("+", token.getContent());
-		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
 		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
@@ -3943,12 +3776,10 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("[", token.getContent());
-		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
 		Assert.assertEquals(1, token.getSubTokens().size());
 		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
-
 
 		cql = "<=as'. \n adf '' ; * , ? [ ]  teste' 123";
 		token = lexicalParser.isOptionalPairSymbol(cql, true);
@@ -3956,8 +3787,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("<=", token.getContent());
-		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.OPTIONAL_PAIR_SYMBOL, token.getType());
 		Assert.assertEquals(2, token.getSubTokens().size());
 		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(0).getType());
@@ -3965,10 +3795,7 @@ class LexicalParserTest {
 		Assert.assertEquals(TokenType.SYMBOL, token.getSubTokens().get(1).getType());
 		Assert.assertEquals("=", token.getSubTokens().get(1).getContent());
 
-
-
 	}
-
 
 	// <SYMBOL> ::= = | < | > | ! | + | - | / | * | ( | ) | { | } | , [ | ]
 	@Test
@@ -3994,8 +3821,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("*", token.getContent());
-		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.SYMBOL, token.getType());
 		Assert.assertEquals(0, token.getSubTokens().size());
 
@@ -4006,8 +3832,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("-", token.getContent());
-		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.SYMBOL, token.getType());
 		Assert.assertEquals(0, token.getSubTokens().size());
 
@@ -4017,8 +3842,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("+", token.getContent());
-		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.SYMBOL, token.getType());
 		Assert.assertEquals(0, token.getSubTokens().size());
 
@@ -4028,8 +3852,7 @@ class LexicalParserTest {
 
 		Assert.assertNotNull(token);
 		Assert.assertEquals("[", token.getContent());
-		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123",
-				token.getPosContent());
+		Assert.assertEquals("as'. \n adf '' ; * , ? [ ]  teste' 123", token.getPosContent());
 		Assert.assertEquals(TokenType.SYMBOL, token.getType());
 		Assert.assertEquals(0, token.getSubTokens().size());
 
@@ -4038,19 +3861,19 @@ class LexicalParserTest {
 	// <DROP> ::= u(DROP)
 	@Test
 	public void drop() throws CQLException {
-		simpleToken(TokenType.DROP, lexicalParser.&isDrop);
+		simpleToken(TokenType.DROP, lexicalParser::isDrop);
 	}
 
 	// <WHERE> ::= u(WHERE)
 	@Test
 	public void where() throws CQLException {
-		simpleToken(TokenType.WHERE, lexicalParser.&isWhere);
+		simpleToken(TokenType.WHERE, lexicalParser::isWhere);
 	}
 
 	// <LIMIT> ::= u(LIMIT)
 	@Test
 	public void limit() throws CQLException {
-		simpleToken(TokenType.LIMIT, lexicalParser.&isLimit);
+		simpleToken(TokenType.LIMIT, lexicalParser::isLimit);
 	}
 
 	// <ALLOW PARAMETER>::=<ALLOW PARAMETER> ::= <ALLOW><SPACES><FILTERING>
@@ -4073,12 +3896,9 @@ class LexicalParserTest {
 		token = lexicalParser.isAllowParameter(cql, false);
 		Assert.assertEquals(TokenType.ALLOW_PARAMETER, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.ALLOW, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.FILTERING, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.ALLOW, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.FILTERING, token.getSubTokens().get(2).getType());
 		Assert.assertEquals("ALLOW FILTERING", token.getContent());
 		Assert.assertEquals(" test", token.getPosContent());
 
@@ -4087,12 +3907,9 @@ class LexicalParserTest {
 		token = lexicalParser.isAllowParameter(cql, false);
 		Assert.assertEquals(TokenType.ALLOW_PARAMETER, token.getType());
 		Assert.assertEquals(3, token.getSubTokens().size());
-		Assert.assertEquals(TokenType.ALLOW, token.getSubTokens().get(0)
-				.getType());
-		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1)
-				.getType());
-		Assert.assertEquals(TokenType.FILTERING, token.getSubTokens().get(2)
-				.getType());
+		Assert.assertEquals(TokenType.ALLOW, token.getSubTokens().get(0).getType());
+		Assert.assertEquals(TokenType.SPACES, token.getSubTokens().get(1).getType());
+		Assert.assertEquals(TokenType.FILTERING, token.getSubTokens().get(2).getType());
 		Assert.assertEquals("AlLOW FILTERING", token.getContent());
 		Assert.assertEquals(" test", token.getPosContent());
 
@@ -4101,25 +3918,23 @@ class LexicalParserTest {
 	// <ALLOW>::=u(ALLOW)
 	@Test
 	public void allow() throws CQLException {
-		simpleToken(TokenType.ALLOW, lexicalParser.&isAllow);
+		simpleToken(TokenType.ALLOW, lexicalParser::isAllow);
 	}
 
 	// <FILTERING>::=u(FILTERING)
 	@Test
 	public void filtering() throws CQLException {
-		simpleToken(TokenType.FILTERING, lexicalParser.&isFiltering);
+		simpleToken(TokenType.FILTERING, lexicalParser::isFiltering);
 	}
 
-	private   void simpleToken(TokenType type, LexicalTester tester)
-	throws CQLException {
+	private void simpleToken(TokenType type, LexicalTester tester) throws CQLException {
 		String name = type.getName();
 		String uname = name.toUpperCase();
 		String lname = name.toLowerCase();
-		String mname = name.substring(0, 1).toLowerCase() \
-				+ name.substring(1).toUpperCase();
+		String mname = name.substring(0, 1).toLowerCase() + name.substring(1).toUpperCase();
 
 		String cql = lname + " teste";
-		Token token = tester .is(cql, true);
+		Token token = tester.is(cql, true);
 		token = tester.is(cql, false);
 		Assert.assertNotNull(token);
 		Assert.assertEquals(lname, token.getContent());
